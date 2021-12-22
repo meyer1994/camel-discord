@@ -1,5 +1,6 @@
 package io.meyer1994;
 
+import net.dv8tion.jda.api.JDA;
 import org.apache.camel.Category;
 import org.apache.camel.Consumer;
 import org.apache.camel.Processor;
@@ -10,8 +11,6 @@ import org.apache.camel.spi.UriParam;
 import org.apache.camel.spi.UriPath;
 import org.apache.camel.support.DefaultEndpoint;
 
-import java.util.concurrent.ExecutorService;
-
 /**
  * Discord component which does bla bla.
  *
@@ -20,17 +19,20 @@ import java.util.concurrent.ExecutorService;
 @UriEndpoint(firstVersion = "1.0-SNAPSHOT", scheme = "discord", title = "Discord", syntax="discord:name",
              category = {Category.JAVA})
 public class DiscordEndpoint extends DefaultEndpoint {
+    @Metadata(autowired = true)
+    private JDA client;
+
     @UriPath
     @Metadata(required = true)
     private String name;
 
     // Producer
     @UriParam(defaultValue = "MESSAGE_SEND")
-    private DiscordOperation op;
+    private DiscordOperation operation;
 
     // Consumer
     @UriParam(defaultValue = "ON_MESSAGE")
-    private DiscordEvent ev;
+    private DiscordEvent event;
 
     public DiscordEndpoint() {
     }
@@ -39,13 +41,15 @@ public class DiscordEndpoint extends DefaultEndpoint {
         super(uri, component);
     }
 
+    @Override
     public Producer createProducer() {
         return new DiscordProducer(this);
     }
 
+    @Override
     public Consumer createConsumer(Processor processor) throws Exception {
         Consumer consumer = new DiscordConsumer(this, processor);
-        configureConsumer(consumer);
+        this.configureConsumer(consumer);
         return consumer;
     }
 
@@ -64,18 +68,26 @@ public class DiscordEndpoint extends DefaultEndpoint {
     /**
      * The operation to be executed when used by producer.
      */
-    public DiscordOperation getOp() {
-        return op;
+    public DiscordOperation getOperation() {
+        return operation;
     }
 
-    public void setOp(DiscordOperation op) {
-        this.op = op;
+    public void setOperation(DiscordOperation operation) {
+        this.operation = operation;
     }
 
-    public ExecutorService createExecutor() {
-        // TODO: Delete me when you implemented your custom component
-        return getCamelContext()
-                .getExecutorServiceManager()
-                .newSingleThreadExecutor(this, "DiscordConsumer");
+    /**
+     * The type of event that the route listens to.
+     */
+    public DiscordEvent getEvent() {
+        return event;
+    }
+
+    public void setEvent(DiscordEvent event) {
+        this.event = event;
+    }
+
+    public JDA getClient() {
+        return client;
     }
 }

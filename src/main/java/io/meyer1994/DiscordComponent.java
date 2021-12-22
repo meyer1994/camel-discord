@@ -8,10 +8,11 @@ import java.util.Map;
 
 @Component("discord")
 public class DiscordComponent extends DefaultComponent {
-    
+    @Override
     protected Endpoint createEndpoint(String uri, String remaining, Map<String, Object> parameters) throws Exception {
-        Endpoint endpoint = new DiscordEndpoint(uri, this);
-        setProperties(endpoint, parameters);
+        DiscordEndpoint endpoint = new DiscordEndpoint(uri, this);
+        endpoint.setName(remaining);
+        this.setProperties(endpoint, parameters);
         return endpoint;
     }
 }

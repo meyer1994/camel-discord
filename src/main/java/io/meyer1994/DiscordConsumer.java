@@ -1,60 +1,28 @@
 package io.meyer1994;
 
-import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.support.DefaultConsumer;
 
-import java.util.concurrent.ExecutorService;
-
 public class DiscordConsumer extends DefaultConsumer {
     private final DiscordEndpoint endpoint;
-    private final EventBusHelper eventBusHelper;
-
-    private ExecutorService executorService;
 
     public DiscordConsumer(DiscordEndpoint endpoint, Processor processor) {
         super(endpoint, processor);
         this.endpoint = endpoint;
-        eventBusHelper = EventBusHelper.getInstance();
     }
 
     @Override
-    protected void doStart() throws Exception {
-        super.doStart();
-
-        // start a single threaded pool to monitor events
-        executorService = endpoint.createExecutor();
-
-        // submit task to the thread pool
-        executorService.submit(() -> {
-            // subscribe to an event
-            eventBusHelper.subscribe(this::onEventListener);
-        });
+    public DiscordEndpoint getEndpoint() {
+        return (DiscordEndpoint) super.getEndpoint();
     }
 
     @Override
-    protected void doStop() throws Exception {
-        super.doStop();
-
-        // shutdown the thread pool gracefully
-        getEndpoint().getCamelContext().getExecutorServiceManager().shutdownGraceful(executorService);
-    }
-
-    private void onEventListener(final Object event) {
-        final Exchange exchange = createExchange(false);
-
-        exchange.getIn().setBody("Hello World! The time is " + event);
-
-        try {
-            // send message to next processor in the route
-            getProcessor().process(exchange);
-        } catch (Exception e) {
-            exchange.setException(e);
-        } finally {
-            if (exchange.getException() != null) {
-                getExceptionHandler().handleException("Error processing exchange", exchange, exchange.getException());
-            }
-            releaseExchange(exchange, false);
-        }
+    protected void doInit() throws Exception {
+        super.doInit();
+        DiscordEvent event = this.getEndpoint().getEvent();
+        if (event == DiscordEvent.ON_MESSAGE)
+            this.getEndpoint()
+                    .getClient()
+                    .addEventListener(new DiscordHandler(this));
     }
 }
