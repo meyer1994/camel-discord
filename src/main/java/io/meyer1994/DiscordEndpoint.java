@@ -65,24 +65,24 @@ public class DiscordEndpoint extends DefaultEndpoint {
         return name;
     }
 
-    /**
-     * The operation to be executed when used by producer.
-     */
     public DiscordOperation getOperation() {
         return operation;
     }
 
+    /**
+     * The operation to be executed when used by producer.
+     */
     public void setOperation(DiscordOperation operation) {
         this.operation = operation;
+    }
+
+    public DiscordEvent getEvent() {
+        return event;
     }
 
     /**
      * The type of event that the route listens to.
      */
-    public DiscordEvent getEvent() {
-        return event;
-    }
-
     public void setEvent(DiscordEvent event) {
         this.event = event;
     }
