@@ -29,7 +29,13 @@
   </dependencyManagement>
 
   <dependencies>
-
+    <!-- discord -->
+    <dependency>
+      <groupId>net.dv8tion</groupId>
+      <artifactId>JDA</artifactId>
+      <version>5.0.0-alpha.2</version>
+    </dependency>
+    
     <!-- camel -->
     <dependency>
       <groupId>org.apache.camel</groupId>
