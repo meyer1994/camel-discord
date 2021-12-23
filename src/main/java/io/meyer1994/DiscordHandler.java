@@ -24,17 +24,10 @@ public class DiscordHandler extends ListenerAdapter {
                 .setHeader(DiscordConstants.MESSAGE_ID, event.getMessage().getId());
 
         try {
-            this.getConsumer().getProcessor().process(exchange);
+            this.consumer.getProcessor()
+                    .process(exchange);
         } catch (Exception e) {
             exchange.setException(e);
         }
-    }
-
-    public DiscordConsumer getConsumer() {
-        return consumer;
-    }
-
-    public void setConsumer(DiscordConsumer consumer) {
-        this.consumer = consumer;
     }
 }

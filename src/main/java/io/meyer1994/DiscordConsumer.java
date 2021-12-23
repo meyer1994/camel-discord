@@ -19,10 +19,8 @@ public class DiscordConsumer extends DefaultConsumer {
     @Override
     protected void doInit() throws Exception {
         super.doInit();
-        DiscordEvent event = this.getEndpoint().getEvent();
-        if (event == DiscordEvent.ON_MESSAGE)
-            this.getEndpoint()
-                    .getClient()
-                    .addEventListener(new DiscordHandler(this));
+        this.getEndpoint()
+                .getClient()
+                .addEventListener(new DiscordHandler(this));
     }
 }

@@ -29,11 +29,11 @@ public class DiscordEndpoint extends DefaultEndpoint {
 
     // Producer
     @UriParam(defaultValue = "MESSAGE_SEND")
-    private DiscordOperation operation;
+    private DiscordOperation operation = DiscordOperation.MESSAGE_SEND;
 
     // Consumer
     @UriParam(defaultValue = "ON_MESSAGE")
-    private DiscordEvent event;
+    private DiscordEvent event = DiscordEvent.ON_MESSAGE;
 
     public DiscordEndpoint() {
     }
