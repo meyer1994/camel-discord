@@ -19,6 +19,7 @@ import org.apache.camel.support.DefaultEndpoint;
 @UriEndpoint(firstVersion = "1.0-SNAPSHOT", scheme = "discord", title = "Discord", syntax="discord:name",
              category = {Category.JAVA})
 public class DiscordEndpoint extends DefaultEndpoint {
+    @UriParam
     @Metadata(autowired = true)
     private JDA client;
 
@@ -89,5 +90,12 @@ public class DiscordEndpoint extends DefaultEndpoint {
 
     public JDA getClient() {
         return client;
+    }
+
+    /**
+     * The discord JDA client to be used. Must be autowired
+     */
+    public void setClient(JDA client) {
+        this.client = client;
     }
 }
