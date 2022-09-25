@@ -9,9 +9,9 @@ public class DiscordComponentTest extends CamelTestSupport {
 
     @Test
     public void testDiscordEndpoint() throws Exception {
-        DiscordComponent component = this.context
-                .getComponent("discord", DiscordComponent.class);
-        DiscordEndpoint endpoint = (DiscordEndpoint) component
+        DiscordEndpoint endpoint = (DiscordEndpoint) this
+                .createCamelContext()
+                .getComponent("discord", DiscordComponent.class)
                 .createEndpoint("discord:banana?operation=MESSAGE_REPLY&event=ON_MESSAGE");
 
         assertEquals(endpoint.getOperation(), DiscordOperation.MESSAGE_REPLY);
