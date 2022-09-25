@@ -1,6 +1,7 @@
 package io.meyer1994;
 
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.entities.emoji.Emoji;
 import org.apache.camel.Exchange;
 import org.apache.camel.support.DefaultProducer;
 import org.slf4j.Logger;
@@ -68,7 +69,7 @@ public class DiscordProducer extends DefaultProducer {
         String emote = exchange.getIn()
                 .getBody(String.class);
         this.getChannel(exchange)
-                .addReactionById(message, emote)
+                .addReactionById(message, Emoji.fromUnicode(emote))
                 .queue();
     }
 }
