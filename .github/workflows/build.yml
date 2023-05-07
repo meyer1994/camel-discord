@@ -12,5 +12,6 @@ jobs:
       - uses: actions/setup-java@v3
         with:
           java-version: 19
+          distribution: adopt
           cache: maven
       - run: mvn verify
