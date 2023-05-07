@@ -11,7 +11,7 @@
     "supportLevel": "Preview",
     "groupId": "io.meyer1994",
     "artifactId": "camel-discord",
-    "version": "1.0-SNAPSHOT",
+    "version": "0.0.1-SNAPSHOT",
     "scheme": "discord",
     "extendsScheme": "",
     "syntax": "discord:name",
