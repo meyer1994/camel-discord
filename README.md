@@ -22,6 +22,8 @@ makes Discord very powerful. This is my attempt on creating a component.
 
 ## Install
 
+The component requires Java 19 or newer and is built against Apache Camel 4.x.
+
 To build this project use
 
 ```sh 
