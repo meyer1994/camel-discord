@@ -3,7 +3,12 @@ package io.meyer1994;
 import org.apache.camel.test.junit5.CamelTestSupport;
 import org.junit.jupiter.api.Test;
 
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DiscordComponentTest extends CamelTestSupport {
 
@@ -17,5 +22,19 @@ public class DiscordComponentTest extends CamelTestSupport {
         assertEquals(endpoint.getOperation(), DiscordOperation.MESSAGE_REPLY);
         assertEquals(endpoint.getEvent(), DiscordEvent.ON_MESSAGE);
         assertEquals(endpoint.getName(), "banana");
+    }
+
+    @Test
+    public void testDiscordComponentIsDiscoveredByCamel() throws Exception {
+        assertInstanceOf(DiscordComponent.class, createCamelContext().getComponent("discord"));
+    }
+
+    @Test
+    public void testGeneratedMetadataUsesCurrentComponentDescriptionAndCategory() throws Exception {
+        try (InputStream stream = getClass().getResourceAsStream("/META-INF/io/meyer1994/discord.json")) {
+            String metadata = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+            assertTrue(metadata.contains("\"label\": \"social\""));
+            assertTrue(metadata.contains("Apache Camel endpoint for receiving Discord messages"));
+        }
     }
 }

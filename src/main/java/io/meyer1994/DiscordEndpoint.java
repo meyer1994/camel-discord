@@ -12,12 +12,11 @@ import org.apache.camel.spi.UriPath;
 import org.apache.camel.support.DefaultEndpoint;
 
 /**
- * Discord component which does bla bla.
- *
- * TODO: Update one line description above what the component does.
+ * Apache Camel endpoint for receiving Discord messages and sending, replying to,
+ * or reacting to Discord messages through a configured JDA client.
  */
 @UriEndpoint(firstVersion = "1.0-SNAPSHOT", scheme = "discord", title = "Discord", syntax="discord:name",
-             category = {Category.JAVA})
+             category = {Category.SOCIAL})
 public class DiscordEndpoint extends DefaultEndpoint {
     @UriParam
     @Metadata(autowired = true)
