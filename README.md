@@ -8,7 +8,9 @@ This was way harder to do than it should have been
 ## Table of Contents
 
 - [About](#about)
+- [Project layout](#project-layout)
 - [Install](#install)
+- [Run the example](#run-the-example)
 - [Usage](#usage)
 - [Thanks](#thanks)
 
@@ -20,6 +22,11 @@ many other things. Reboot an EC2 instance on AWS, send an e-mail, etc.
 [Apache Camel][1] is an integrations library. Adding a Discord component to it 
 makes Discord very powerful. This is my attempt on creating a component.
 
+## Project layout
+
+- `lib` contains the reusable `camel-discord` Camel component.
+- `example` contains a standalone Java bot that demonstrates the component.
+
 ## Install
 
 The component requires Java 19 or newer and is built against Apache Camel 4.x.
@@ -29,6 +36,20 @@ To build this project use
 ```sh 
 $ mvn install
 ```
+
+The reusable library artifact is `io.meyer1994:camel-discord`.
+
+## Run the example
+
+Build the library and example modules, then provide the Discord bot token through
+the `DISCORD_TOKEN` environment variable:
+
+```sh
+$ mvn -pl example -am install
+$ DISCORD_TOKEN=YOUR_DISCORD_BOT_TOKEN mvn -pl example exec:java
+```
+
+The example listens for `!ping` and replies with `Pong!`.
 
 ### Gradle
 
