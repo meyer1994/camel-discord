@@ -5,6 +5,7 @@ import org.apache.camel.support.DefaultConsumer;
 
 public class DiscordConsumer extends DefaultConsumer {
     private final DiscordEndpoint endpoint;
+    private DiscordHandler handler;
 
     public DiscordConsumer(DiscordEndpoint endpoint, Processor processor) {
         super(endpoint, processor);
@@ -19,8 +20,16 @@ public class DiscordConsumer extends DefaultConsumer {
     @Override
     protected void doInit() throws Exception {
         super.doInit();
-        this.getEndpoint()
-                .getClient()
-                .addEventListener(new DiscordHandler(this));
+        this.handler = new DiscordHandler(this);
+        this.getEndpoint().getClient().addEventListener(this.handler);
+    }
+
+    @Override
+    protected void doStop() throws Exception {
+        if (this.handler != null) {
+            this.getEndpoint().getClient().removeEventListener(this.handler);
+            this.handler = null;
+        }
+        super.doStop();
     }
 }

@@ -22,7 +22,7 @@ public class DiscordProducer extends DefaultProducer {
     }
 
     @Override
-    public void process(Exchange exchange) {
+    public void process(Exchange exchange) throws Exception {
         DiscordOperation operation = this.getEndpoint()
                 .getOperation();
 
@@ -41,9 +41,13 @@ public class DiscordProducer extends DefaultProducer {
     protected TextChannel getChannel(final Exchange exchange) {
         String channelId = exchange.getIn()
                 .getHeader(DiscordConstants.CHANNEL_ID, String.class);
-        return this.getEndpoint()
+        TextChannel channel = this.getEndpoint()
                 .getClient()
                 .getTextChannelById(channelId);
+        if (channel == null) {
+            throw new IllegalStateException("Discord text channel not found: " + channelId);
+        }
+        return channel;
     }
 
     protected void messageReply(Exchange exchange) {
@@ -53,14 +57,17 @@ public class DiscordProducer extends DefaultProducer {
                 .getBody(String.class);
         this.getChannel(exchange)
                 .retrieveMessageById(message)
-                .queue(m -> m.reply(reply).queue());
+                .queue(m -> m.reply(reply).queue(
+                        ignored -> {},
+                        failure -> fail(exchange, failure)),
+                        failure -> fail(exchange, failure));
     }
 
     protected void messageSend(Exchange exchange) {
         String message = exchange.getIn().getBody(String.class);
         this.getChannel(exchange)
                 .sendMessage(message)
-                .queue();
+                .queue(ignored -> {}, failure -> fail(exchange, failure));
     }
 
     protected void messageReact(Exchange exchange) {
@@ -70,6 +77,11 @@ public class DiscordProducer extends DefaultProducer {
                 .getBody(String.class);
         this.getChannel(exchange)
                 .addReactionById(message, Emoji.fromUnicode(emote))
-                .queue();
+                .queue(ignored -> {}, failure -> fail(exchange, failure));
+    }
+
+    private void fail(Exchange exchange, Throwable failure) {
+        LOG.warn("Discord operation failed", failure);
+        exchange.setException(failure);
     }
 }
