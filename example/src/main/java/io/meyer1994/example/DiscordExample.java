@@ -14,33 +14,38 @@ public final class DiscordExample {
     }
 
     public static void main(String[] args) throws Exception {
-        String token = requireToken(System.getenv("DISCORD_TOKEN"));
-        JDA jda = JDABuilder.createDefault(token)
+        DefaultCamelContext context = new DefaultCamelContext();
+        
+        JDA jda = JDABuilder.createDefault(System.getenv("DISCORD_TOKEN"))
                 .enableIntents(GatewayIntent.MESSAGE_CONTENT)
                 .build();
 
-        DefaultCamelContext context = new DefaultCamelContext();
         context.getRegistry().bind("jda", jda);
+
         context.addRoutes(new RouteBuilder() {
             @Override
             public void configure() {
                 from("discord:ping")
+                        .log("Message received: ${body.contentRaw}")
                         .filter().simple("${body.contentRaw} == '!ping'")
                         .transform().constant("Pong!")
                         .to("discord:pong");
+                
+                from("discord:nice")
+                        .log("Message received: ${body.contentRaw}")
+                        .filter().simple("${body.contentRaw} == '!nice'")
+                        .split(constant("🇳,🇮,🇨,🇪"))
+                                .delimiter(",")
+                                .to("discord:nice-reaction?operation=MESSAGE_REACT")
+                        .end();
             }
         });
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> stop(context, jda)));
+        Runtime.getRuntime()
+            .addShutdownHook(new Thread(() -> stop(context, jda)));
+
         context.start();
         new CountDownLatch(1).await();
-    }
-
-    static String requireToken(String token) {
-        if (token == null || token.isBlank()) {
-            throw new IllegalStateException("DISCORD_TOKEN must be set before starting the example");
-        }
-        return token;
     }
 
     private static void stop(DefaultCamelContext context, JDA jda) {
