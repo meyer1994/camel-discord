@@ -1,12 +1,10 @@
 package io.meyer1994;
 
 import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.events.message.GenericMessageEvent;
 import net.dv8tion.jda.api.events.message.MessageBulkDeleteEvent;
 import net.dv8tion.jda.api.events.message.MessageDeleteEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.MessageUpdateEvent;
-import net.dv8tion.jda.api.events.message.react.GenericMessageReactionEvent;
 import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent;
 import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveAllEvent;
 import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveEmojiEvent;
@@ -24,33 +22,84 @@ public class DiscordHandler extends ListenerAdapter {
 
     @Override
     public void onMessageReceived(MessageReceivedEvent event) {
+        if (!this.consumer.getEndpoint().getName().equals("onMessageReceived")) {
+            return;
+        }
+
         Message message = event.getMessage();
-        Exchange exchange = createMessageExchange(DiscordEvent.ON_MESSAGE, event, event);
-        setAuthorHeaders(exchange, event.getAuthor().getId(), event.getAuthor().isBot());
+        Exchange exchange = this.consumer.getEndpoint().createExchange();
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_EVENT, "onMessageReceived");
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_ID, event.getChannel().getId());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_ID, event.getMessageId());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_AUTHOR_ID, event.getAuthor().getId());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_AUTHOR_IS_BOT, event.getAuthor().isBot());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_TYPE, event.getChannelType().name());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_IS_FROM_GUILD, event.isFromGuild());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_IS_FROM_THREAD, event.isFromThread());
         exchange.getMessage().setHeader(DiscordConstants.HEADER_IS_WEBHOOK, event.isWebhookMessage());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_URL, event.getJumpUrl());
         exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_TIMESTAMP, message.getTimeCreated());
-        processIfSelected(DiscordEvent.ON_MESSAGE, exchange);
+        if (event.isFromGuild()) {
+            exchange.getMessage().setHeader(DiscordConstants.HEADER_GUILD_ID, event.getGuild().getId());
+        }
+        exchange.getMessage().setBody(event);
+        this.process(exchange);
     }
 
     @Override
     public void onMessageUpdate(MessageUpdateEvent event) {
+        if (!this.consumer.getEndpoint().getName().equals("onMessageUpdate")) {
+            return;
+        }
+
         Message message = event.getMessage();
-        Exchange exchange = createMessageExchange(DiscordEvent.ON_MESSAGE_UPDATE, event, event);
-        setAuthorHeaders(exchange, event.getAuthor().getId(), event.getAuthor().isBot());
+        Exchange exchange = this.consumer.getEndpoint().createExchange();
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_EVENT, "onMessageUpdate");
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_ID, event.getChannel().getId());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_ID, event.getMessageId());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_AUTHOR_ID, event.getAuthor().getId());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_AUTHOR_IS_BOT, event.getAuthor().isBot());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_TYPE, event.getChannelType().name());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_IS_FROM_GUILD, event.isFromGuild());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_IS_FROM_THREAD, event.isFromThread());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_URL, event.getJumpUrl());
         exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_TIMESTAMP, message.getTimeCreated());
-        processIfSelected(DiscordEvent.ON_MESSAGE_UPDATE, exchange);
+        if (event.isFromGuild()) {
+            exchange.getMessage().setHeader(DiscordConstants.HEADER_GUILD_ID, event.getGuild().getId());
+        }
+        exchange.getMessage().setBody(event);
+        this.process(exchange);
     }
 
     @Override
     public void onMessageDelete(MessageDeleteEvent event) {
-        Exchange exchange = createMessageExchange(DiscordEvent.ON_MESSAGE_DELETE, event, event);
-        processIfSelected(DiscordEvent.ON_MESSAGE_DELETE, exchange);
+        if (!this.consumer.getEndpoint().getName().equals("onMessageDelete")) {
+            return;
+        }
+
+        Exchange exchange = this.consumer.getEndpoint().createExchange();
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_EVENT, "onMessageDelete");
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_ID, event.getChannel().getId());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_ID, event.getMessageId());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_TYPE, event.getChannelType().name());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_IS_FROM_GUILD, event.isFromGuild());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_IS_FROM_THREAD, event.isFromThread());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_URL, event.getJumpUrl());
+        if (event.isFromGuild()) {
+            exchange.getMessage().setHeader(DiscordConstants.HEADER_GUILD_ID, event.getGuild().getId());
+        }
+        exchange.getMessage().setBody(event);
+        this.process(exchange);
     }
 
     @Override
     public void onMessageBulkDelete(MessageBulkDeleteEvent event) {
+        if (!this.consumer.getEndpoint().getName().equals("onMessageBulkDelete")) {
+            return;
+        }
+
         Exchange exchange = this.consumer.getEndpoint().createExchange();
-        exchange.getMessage().setHeader(DiscordConstants.HEADER_EVENT, DiscordEvent.ON_MESSAGE_BULK_DELETE.name());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_EVENT, "onMessageBulkDelete");
         exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_ID, event.getChannel().getId());
         exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_TYPE, event.getChannel().getType().name());
         exchange.getMessage().setHeader(DiscordConstants.HEADER_IS_FROM_GUILD, true);
@@ -58,67 +107,95 @@ public class DiscordHandler extends ListenerAdapter {
         exchange.getMessage().setHeader(DiscordConstants.HEADER_GUILD_ID, event.getGuild().getId());
         exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_IDS, event.getMessageIds());
         exchange.getMessage().setBody(event);
-        processIfSelected(DiscordEvent.ON_MESSAGE_BULK_DELETE, exchange);
+        this.process(exchange);
     }
 
     @Override
     public void onMessageReactionAdd(MessageReactionAddEvent event) {
-        Exchange exchange = createReactionExchange(DiscordEvent.ON_MESSAGE_REACTION_ADD, event);
+        if (!this.consumer.getEndpoint().getName().equals("onMessageReactionAdd")) {
+            return;
+        }
+
+        Exchange exchange = this.consumer.getEndpoint().createExchange();
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_EVENT, "onMessageReactionAdd");
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_ID, event.getChannel().getId());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_ID, event.getMessageId());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_TYPE, event.getChannelType().name());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_IS_FROM_GUILD, event.isFromGuild());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_IS_FROM_THREAD, event.isFromThread());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_URL, event.getJumpUrl());
         exchange.getMessage().setHeader(DiscordConstants.HEADER_REACTION_USER_ID, event.getUserId());
         exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_AUTHOR_ID, event.getMessageAuthorId());
-        processIfSelected(DiscordEvent.ON_MESSAGE_REACTION_ADD, exchange);
+        if (event.isFromGuild()) {
+            exchange.getMessage().setHeader(DiscordConstants.HEADER_GUILD_ID, event.getGuild().getId());
+        }
+        exchange.getMessage().setBody(event);
+        this.process(exchange);
     }
 
     @Override
     public void onMessageReactionRemove(MessageReactionRemoveEvent event) {
-        Exchange exchange = createReactionExchange(DiscordEvent.ON_MESSAGE_REACTION_REMOVE, event);
+        if (!this.consumer.getEndpoint().getName().equals("onMessageReactionRemove")) {
+            return;
+        }
+
+        Exchange exchange = this.consumer.getEndpoint().createExchange();
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_EVENT, "onMessageReactionRemove");
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_ID, event.getChannel().getId());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_ID, event.getMessageId());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_TYPE, event.getChannelType().name());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_IS_FROM_GUILD, event.isFromGuild());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_IS_FROM_THREAD, event.isFromThread());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_URL, event.getJumpUrl());
         exchange.getMessage().setHeader(DiscordConstants.HEADER_REACTION_USER_ID, event.getUserId());
-        processIfSelected(DiscordEvent.ON_MESSAGE_REACTION_REMOVE, exchange);
+        if (event.isFromGuild()) {
+            exchange.getMessage().setHeader(DiscordConstants.HEADER_GUILD_ID, event.getGuild().getId());
+        }
+        exchange.getMessage().setBody(event);
+        this.process(exchange);
     }
 
     @Override
     public void onMessageReactionRemoveAll(MessageReactionRemoveAllEvent event) {
-        Exchange exchange = createMessageExchange(DiscordEvent.ON_MESSAGE_REACTION_REMOVE_ALL, event, event);
-        processIfSelected(DiscordEvent.ON_MESSAGE_REACTION_REMOVE_ALL, exchange);
-    }
+        if (!this.consumer.getEndpoint().getName().equals("onMessageReactionRemoveAll")) {
+            return;
+        }
 
-    @Override
-    public void onMessageReactionRemoveEmoji(MessageReactionRemoveEmojiEvent event) {
-        Exchange exchange = createMessageExchange(DiscordEvent.ON_MESSAGE_REACTION_REMOVE_EMOJI, event, event);
-        exchange.getMessage().setHeader(DiscordConstants.HEADER_REACTION_EMOJI, event.getEmoji().getName());
-        processIfSelected(DiscordEvent.ON_MESSAGE_REACTION_REMOVE_EMOJI, exchange);
-    }
-
-    private Exchange createMessageExchange(DiscordEvent type, GenericMessageEvent event, Object body) {
         Exchange exchange = this.consumer.getEndpoint().createExchange();
-        exchange.getMessage().setHeader(DiscordConstants.HEADER_EVENT, type.name());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_EVENT, "onMessageReactionRemoveAll");
         exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_ID, event.getChannel().getId());
-        exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_TYPE, event.getChannelType().name());
         exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_ID, event.getMessageId());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_TYPE, event.getChannelType().name());
         exchange.getMessage().setHeader(DiscordConstants.HEADER_IS_FROM_GUILD, event.isFromGuild());
         exchange.getMessage().setHeader(DiscordConstants.HEADER_IS_FROM_THREAD, event.isFromThread());
         exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_URL, event.getJumpUrl());
         if (event.isFromGuild()) {
             exchange.getMessage().setHeader(DiscordConstants.HEADER_GUILD_ID, event.getGuild().getId());
         }
-        exchange.getMessage().setBody(body);
-        return exchange;
+        exchange.getMessage().setBody(event);
+        this.process(exchange);
     }
 
-    private Exchange createReactionExchange(DiscordEvent type, GenericMessageReactionEvent event) {
-        Exchange exchange = createMessageExchange(type, event, event);
-        return exchange;
-    }
-
-    private void setAuthorHeaders(Exchange exchange, String authorId, boolean bot) {
-        exchange.getMessage().setHeader(DiscordConstants.HEADER_AUTHOR_ID, authorId);
-        exchange.getMessage().setHeader(DiscordConstants.HEADER_AUTHOR_IS_BOT, bot);
-    }
-
-    private void processIfSelected(DiscordEvent type, Exchange exchange) {
-        if (this.consumer.getEndpoint().getEvent() == type) {
-            process(exchange);
+    @Override
+    public void onMessageReactionRemoveEmoji(MessageReactionRemoveEmojiEvent event) {
+        if (!this.consumer.getEndpoint().getName().equals("onMessageReactionRemoveEmoji")) {
+            return;
         }
+
+        Exchange exchange = this.consumer.getEndpoint().createExchange();
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_EVENT, "onMessageReactionRemoveEmoji");
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_ID, event.getChannel().getId());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_ID, event.getMessageId());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_TYPE, event.getChannelType().name());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_IS_FROM_GUILD, event.isFromGuild());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_IS_FROM_THREAD, event.isFromThread());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_URL, event.getJumpUrl());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_REACTION_EMOJI, event.getEmoji().getName());
+        if (event.isFromGuild()) {
+            exchange.getMessage().setHeader(DiscordConstants.HEADER_GUILD_ID, event.getGuild().getId());
+        }
+        exchange.getMessage().setBody(event);
+        this.process(exchange);
     }
 
     private void process(Exchange exchange) {

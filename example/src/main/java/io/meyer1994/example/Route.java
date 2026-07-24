@@ -5,47 +5,55 @@ import org.apache.camel.builder.RouteBuilder;
 public class Route extends RouteBuilder {
     @Override
     public void configure() throws Exception {
-        from("discord:ping")
+        from("discord:onMessageReceived")
                 .log("Message received: ${body.message.contentRaw}")
-                .filter().simple("${body.message.contentRaw} == '!ping'")
-                .log("Responding to !ping")
-                .transform().constant("Pong!")
-                .to("discord:pong"); // defaults to MESSAGE_SEND operation
+                .choice()
+                    .when().simple("${body.message.contentRaw} == '!ping'")
+                        .log("Responding to !ping")
+                        .transform().constant("Pong!")
+                        .to("discord:sendMessage")
+                    .when().simple("${body.message.contentRaw} == '!nice'")
+                        .log("Reacting to !nice")
+                        .split()
+                            .constant("🇳,🇮,🇨,🇪")
+                            .delimiter(",")
+                            .to("discord:addReactionById")
+                        .end()
+                .end();
 
-        from("discord:nice")
-                .log("Message received: ${body.message.contentRaw}")
-                .filter().simple("${body.message.contentRaw} == '!nice'")
-                .log("Reacting to !nice")
-                .split()
-                    .constant("🇳,🇮,🇨,🇪")
-                    .delimiter(",")
-                    .to("discord:nice-reaction?operation=MESSAGE_REACT")
-                .end()
-                .transform().constant("Nice!")
-                .to("discord:nice?operation=MESSAGE_SEND");
-        
-        from("discord:message-events?event=ON_MESSAGE")
-                .log("Message received: ${body.message.contentRaw}");
+        from("discord:onMessageUpdate")
+                .log("Message updated: ${body.message.contentRaw}")
+                .transform().simple("log.onMessageUpdate: ${body.message}")
+                .to("discord:sendMessage");
 
-        from("discord:message-update-events?event=ON_MESSAGE_UPDATE")
-                .log("Message updated: ${body.message.contentRaw}");
+        from("discord:onMessageDelete")
+                .log("Message deleted: ${body.messageId}")
+                .transform().simple("log.onMessageDelete: ${body.messageId}")
+                .to("discord:sendMessage");
 
-        from("discord:message-delete-events?event=ON_MESSAGE_DELETE")
-                .log("Message deleted: ${body.messageId}");
+        from("discord:onMessageBulkDelete")
+                .log("Messages bulk deleted: ${body.messageIds}")
+                .transform().simple("log.onMessageBulkDelete: ${body.messageIds}")
+                .to("discord:sendMessage");
 
-        from("discord:message-bulk-delete-events?event=ON_MESSAGE_BULK_DELETE")
-                .log("Messages bulk deleted: ${body.messageIds}");
+        from("discord:onMessageReactionAdd")
+                .log("Reaction added: ${body.reaction}")
+                .transform().simple("log.onMessageReactionAdd: emoji=${body.reaction.emoji}")
+                .to("discord:sendMessage");
 
-        from("discord:reaction-add-events?event=ON_MESSAGE_REACTION_ADD")
-                .log("Reaction added: ${body.reaction}");
+        from("discord:onMessageReactionRemove")
+                .log("Reaction removed: ${body.reaction}")
+                .transform().simple("log.onMessageReactionRemove: emoji=${body.reaction.emoji}")
+                .to("discord:sendMessage");
 
-        from("discord:reaction-remove-events?event=ON_MESSAGE_REACTION_REMOVE")
-                .log("Reaction removed: ${body.reaction}");
+        from("discord:onMessageReactionRemoveAll")
+                .log("All reactions removed from message: ${body.messageId}")
+                .transform().simple("log.onMessageReactionRemoveAll: messageId=${body.messageId}")
+                .to("discord:sendMessage");
 
-        from("discord:reaction-remove-all-events?event=ON_MESSAGE_REACTION_REMOVE_ALL")
-                .log("All reactions removed from message: ${body.messageId}");
-
-        from("discord:reaction-remove-emoji-events?event=ON_MESSAGE_REACTION_REMOVE_EMOJI")
-                .log("Reaction emoji removed: ${body.emoji}");
+        from("discord:onMessageReactionRemoveEmoji")
+                .log("Reaction emoji removed: ${body.emoji}")
+                .transform().simple("log.onMessageReactionRemoveEmoji: emoji=${body.emoji}")
+                .to("discord:sendMessage");
     }
 }

@@ -101,10 +101,10 @@ And now you can use the `discord` route. The example below shows a simple
 _ping pong_ bot.
 
 ```java
-from("discord:ping")
-        .filter().simple("${body.contentRaw} == '!ping'")
-        .transform().constant("Pong!")
-        .to("discord:pong");
+from("discord:onMessageReceived")
+.filter().simple("${body.getMessage.getContentRaw} == '!ping'")
+.transform().constant("Pong!")
+.to("discord:sendMessage");
 ```
 
 ## Thanks

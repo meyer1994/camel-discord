@@ -1,6 +1,9 @@
 package io.meyer1994;
 
 import net.dv8tion.jda.api.JDA;
+
+import java.util.Set;
+
 import org.apache.camel.Category;
 import org.apache.camel.Consumer;
 import org.apache.camel.Processor;
@@ -18,6 +21,33 @@ import org.apache.camel.support.DefaultEndpoint;
 @UriEndpoint(firstVersion = "1.0-SNAPSHOT", scheme = "discord", title = "Discord", syntax="discord:name",
              category = {Category.SOCIAL})
 public class DiscordEndpoint extends DefaultEndpoint {
+    private static final Set<String> LISTENER_NAMES = Set.of(
+            "onMessageReceived",
+            "onMessageUpdate",
+            "onMessageDelete",
+            "onMessageBulkDelete",
+            "onMessageReactionAdd",
+            "onMessageReactionRemove",
+            "onMessageReactionRemoveAll",
+            "onMessageReactionRemoveEmoji"
+    );
+
+    private static final Set<String> PRODUCER_NAMES = Set.of(
+            "sendMessage",
+            "editMessageById",
+            "deleteMessageById",
+            "deleteMessagesByIds",
+            "retrieveMessageById",
+            "addReactionById",
+            "removeReactionById",
+            "clearReactions",
+            "pin",
+            "unpin",
+            "sendTyping",
+            "reply"
+    );
+
+
     @UriParam
     @Metadata(autowired = true)
     private JDA client;
@@ -25,14 +55,6 @@ public class DiscordEndpoint extends DefaultEndpoint {
     @UriPath
     @Metadata(required = true)
     private String name;
-
-    // Producer
-    @UriParam(defaultValue = "MESSAGE_SEND")
-    private DiscordOperation operation = DiscordOperation.MESSAGE_SEND;
-
-    // Consumer
-    @UriParam(defaultValue = "ON_MESSAGE")
-    private DiscordEvent event = DiscordEvent.ON_MESSAGE;
 
     public DiscordEndpoint() {
     }
@@ -48,14 +70,27 @@ public class DiscordEndpoint extends DefaultEndpoint {
 
     @Override
     public Consumer createConsumer(Processor processor) throws Exception {
+        switch (this.name) {
+            case "onMessageReceived":
+            case "onMessageUpdate":
+            case "onMessageDelete":
+            case "onMessageBulkDelete":
+            case "onMessageReactionAdd":
+            case "onMessageReactionRemove":
+            case "onMessageReactionRemoveAll":
+            case "onMessageReactionRemoveEmoji":
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported Discord listener method: " + this.name);
+        }
         Consumer consumer = new DiscordConsumer(this, processor);
         this.configureConsumer(consumer);
         return consumer;
     }
 
     /**
-     * The name has no functionality. It is here mostly to
-     * make route identification easier for the developer
+     * For consumers, the exact ListenerAdapter method name to receive.
+     * For producers, the Discord JDA method name to invoke.
      */
     public void setName(String name) {
         this.name = name;
@@ -66,25 +101,11 @@ public class DiscordEndpoint extends DefaultEndpoint {
     }
 
     public DiscordOperation getOperation() {
-        return operation;
-    }
-
-    /**
-     * The operation to be executed when used by producer.
-     */
-    public void setOperation(DiscordOperation operation) {
-        this.operation = operation;
-    }
-
-    public DiscordEvent getEvent() {
-        return event;
-    }
-
-    /**
-     * The type of event that the route listens to.
-     */
-    public void setEvent(DiscordEvent event) {
-        this.event = event;
+        try {
+            return DiscordOperation.valueOf(this.name);
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalArgumentException("Unsupported Discord producer method: " + this.name, exception);
+        }
     }
 
     public JDA getClient() {

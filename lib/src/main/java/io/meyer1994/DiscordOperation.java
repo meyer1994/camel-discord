@@ -1,16 +1,16 @@
 package io.meyer1994;
 
 public enum DiscordOperation {
-    MESSAGE_SEND,
-    MESSAGE_EDIT,
-    MESSAGE_DELETE,
-    MESSAGE_BULK_DELETE,
-    MESSAGE_RETRIEVE,
-    MESSAGE_REACT,
-    MESSAGE_REACT_REMOVE,
-    MESSAGE_CLEAR_REACTIONS,
-    MESSAGE_PIN,
-    MESSAGE_UNPIN,
-    MESSAGE_TYPING,
-    MESSAGE_REPLY
+    sendMessage,
+    editMessageById,
+    deleteMessageById,
+    deleteMessagesByIds,
+    retrieveMessageById,
+    addReactionById,
+    removeReactionById,
+    clearReactions,
+    pin,
+    unpin,
+    sendTyping,
+    reply
 }

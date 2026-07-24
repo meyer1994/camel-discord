@@ -6,14 +6,37 @@ import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 import net.dv8tion.jda.api.utils.messages.MessageEditData;
+
+import java.util.Set;
+
 import org.apache.camel.Exchange;
 import org.apache.camel.support.DefaultProducer;
 
 public class DiscordProducer extends DefaultProducer {
+    private static final Set<String> PRODUCER_NAMES = Set.of(
+        "sendMessage",
+        "editMessageById",
+        "deleteMessageById",
+        "deleteMessagesByIds",
+        "retrieveMessageById",
+        "addReactionById",
+        "removeReactionById",
+        "clearReactions",
+        "pin",
+        "unpin",
+        "sendTyping",
+        "reply"
+);
+
     private DiscordEndpoint endpoint;
 
     public DiscordProducer(DiscordEndpoint endpoint) {
         super(endpoint);
+        
+        if (!PRODUCER_NAMES.contains(endpoint.getName())) {
+            throw new IllegalArgumentException("Unsupported Discord producer method: " + endpoint.getName());
+        }
+
         this.endpoint = endpoint;
     }
 
@@ -28,40 +51,40 @@ public class DiscordProducer extends DefaultProducer {
                 .getOperation();
 
         switch (operation) {
-            case MESSAGE_SEND:
+            case sendMessage:
                 this.messageSend(exchange);
                 return;
-            case MESSAGE_EDIT:
+            case editMessageById:
                 this.messageEdit(exchange);
                 return;
-            case MESSAGE_DELETE:
+            case deleteMessageById:
                 this.messageDelete(exchange);
                 return;
-            case MESSAGE_BULK_DELETE:
+            case deleteMessagesByIds:
                 this.messageBulkDelete(exchange);
                 return;
-            case MESSAGE_RETRIEVE:
+            case retrieveMessageById:
                 this.messageRetrieve(exchange);
                 return;
-            case MESSAGE_REACT:
+            case addReactionById:
                 this.messageReact(exchange);
                 return;
-            case MESSAGE_REACT_REMOVE:
+            case removeReactionById:
                 this.messageReactRemove(exchange);
                 return;
-            case MESSAGE_CLEAR_REACTIONS:
+            case clearReactions:
                 this.messageClearReactions(exchange);
                 return;
-            case MESSAGE_PIN:
+            case pin:
                 this.messagePin(exchange);
                 return;
-            case MESSAGE_UNPIN:
+            case unpin:
                 this.messageUnpin(exchange);
                 return;
-            case MESSAGE_TYPING:
+            case sendTyping:
                 this.messageTyping(exchange);
                 return;
-            case MESSAGE_REPLY:
+            case reply:
                 this.messageReply(exchange);
                 return;
             default:
