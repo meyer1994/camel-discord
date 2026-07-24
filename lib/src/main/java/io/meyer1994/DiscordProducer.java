@@ -40,7 +40,7 @@ public class DiscordProducer extends DefaultProducer {
 
     protected TextChannel getChannel(final Exchange exchange) {
         String channelId = exchange.getIn()
-                .getHeader(DiscordConstants.CHANNEL_ID, String.class);
+                .getHeader(DiscordConstants.HEADER_CHANNEL_ID, String.class);
         TextChannel channel = this.getEndpoint()
                 .getClient()
                 .getTextChannelById(channelId);
@@ -52,7 +52,7 @@ public class DiscordProducer extends DefaultProducer {
 
     protected void messageReply(Exchange exchange) {
         String message = exchange.getIn()
-                .getHeader(DiscordConstants.MESSAGE_ID, String.class);
+                .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
         String reply = exchange.getIn()
                 .getBody(String.class);
         this.getChannel(exchange)
@@ -72,7 +72,7 @@ public class DiscordProducer extends DefaultProducer {
 
     protected void messageReact(Exchange exchange) {
         String message = exchange.getIn()
-                .getHeader(DiscordConstants.MESSAGE_ID, String.class);
+                .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
         String emote = exchange.getIn()
                 .getBody(String.class);
         this.getChannel(exchange)
