@@ -4,7 +4,7 @@ import org.apache.camel.Processor;
 import org.apache.camel.support.DefaultConsumer;
 
 public class DiscordConsumer extends DefaultConsumer {
-    private final DiscordEndpoint endpoint;
+    private DiscordEndpoint endpoint;
     private DiscordHandler handler;
 
     public DiscordConsumer(DiscordEndpoint endpoint, Processor processor) {
@@ -14,7 +14,7 @@ public class DiscordConsumer extends DefaultConsumer {
 
     @Override
     public DiscordEndpoint getEndpoint() {
-        return (DiscordEndpoint) super.getEndpoint();
+        return this.endpoint;
     }
 
     @Override

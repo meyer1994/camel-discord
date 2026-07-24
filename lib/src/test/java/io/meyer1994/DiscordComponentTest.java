@@ -37,4 +37,14 @@ public class DiscordComponentTest extends CamelTestSupport {
             assertTrue(metadata.contains("Apache Camel endpoint for receiving Discord messages"));
         }
     }
+
+    @Test
+    public void testAdditionalDiscordEventsCanBeConfigured() throws Exception {
+        DiscordEndpoint endpoint = (DiscordEndpoint) this
+                .createCamelContext()
+                .getComponent("discord", DiscordComponent.class)
+                .createEndpoint("discord:commands?event=ON_MESSAGE_UPDATE");
+
+        assertEquals(DiscordEvent.ON_MESSAGE_UPDATE, endpoint.getEvent());
+    }
 }
