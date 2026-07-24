@@ -17,7 +17,7 @@ import net.dv8tion.jda.api.JDA;
  * or reacting to Discord messages through a configured JDA client.
  */
 @UriEndpoint(firstVersion = "1.0-SNAPSHOT", scheme = "discord", title = "Discord", syntax = "discord:name", category = {
-        Category.SOCIAL })
+        Category.SOCIAL }, headersClass = DiscordConstants.class)
 public class DiscordEndpoint extends DefaultEndpoint {
     @UriParam
     @Metadata(autowired = true)

@@ -37,6 +37,8 @@ public class DiscordComponentTest extends CamelTestSupport {
             assertTrue(metadata.contains("Apache Camel endpoint for receiving Discord messages"));
             assertTrue(metadata.contains("\"event\""));
             assertTrue(metadata.contains("\"operation\""));
+            assertTrue(DiscordConstants.class.isInterface());
+            assertTrue(metadata.contains("x-camel-discord-message-id"));
         }
     }
 
