@@ -10,7 +10,7 @@ public class Route extends RouteBuilder {
                 .filter().simple("${body.message.contentRaw} == '!ping'")
                 .log("Responding to !ping")
                 .transform().constant("Pong!")
-                .to("discord:pong");
+                .to("discord:pong"); // defaults to MESSAGE_SEND operation
 
         from("discord:nice")
                 .log("Message received: ${body.message.contentRaw}")
