@@ -1,14 +1,15 @@
 package io.meyer1994;
 
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel;
+import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
+import net.dv8tion.jda.api.utils.messages.MessageCreateData;
+import net.dv8tion.jda.api.utils.messages.MessageEditData;
 import org.apache.camel.Exchange;
 import org.apache.camel.support.DefaultProducer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class DiscordProducer extends DefaultProducer {
-    private static final Logger LOG = LoggerFactory.getLogger(DiscordProducer.class);
     private DiscordEndpoint endpoint;
 
     public DiscordProducer(DiscordEndpoint endpoint) {
@@ -30,58 +31,169 @@ public class DiscordProducer extends DefaultProducer {
             case MESSAGE_SEND:
                 this.messageSend(exchange);
                 return;
+            case MESSAGE_EDIT:
+                this.messageEdit(exchange);
+                return;
+            case MESSAGE_DELETE:
+                this.messageDelete(exchange);
+                return;
+            case MESSAGE_BULK_DELETE:
+                this.messageBulkDelete(exchange);
+                return;
+            case MESSAGE_RETRIEVE:
+                this.messageRetrieve(exchange);
+                return;
             case MESSAGE_REACT:
                 this.messageReact(exchange);
                 return;
+            case MESSAGE_REACT_REMOVE:
+                this.messageReactRemove(exchange);
+                return;
+            case MESSAGE_CLEAR_REACTIONS:
+                this.messageClearReactions(exchange);
+                return;
+            case MESSAGE_PIN:
+                this.messagePin(exchange);
+                return;
+            case MESSAGE_UNPIN:
+                this.messageUnpin(exchange);
+                return;
+            case MESSAGE_TYPING:
+                this.messageTyping(exchange);
+                return;
             case MESSAGE_REPLY:
                 this.messageReply(exchange);
+                return;
+            default:
+                throw new IllegalArgumentException("Unsupported Discord operation: " + operation);
         }
     }
 
-    protected TextChannel getChannel(final Exchange exchange) {
+    protected MessageChannel getChannel(final Exchange exchange) {
         String channelId = exchange.getIn()
                 .getHeader(DiscordConstants.HEADER_CHANNEL_ID, String.class);
-        TextChannel channel = this.getEndpoint()
+        return this.getEndpoint()
                 .getClient()
-                .getTextChannelById(channelId);
-        if (channel == null) {
-            throw new IllegalStateException("Discord text channel not found: " + channelId);
-        }
-        return channel;
+                .getChannelById(MessageChannel.class, channelId);
     }
 
     protected void messageReply(Exchange exchange) {
-        String message = exchange.getIn()
+        String messageId = exchange.getIn()
                 .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
-        String reply = exchange.getIn()
-                .getBody(String.class);
-        this.getChannel(exchange)
-                .retrieveMessageById(message)
-                .queue(m -> m.reply(reply).queue(
-                        ignored -> {},
-                        failure -> fail(exchange, failure)),
-                        failure -> fail(exchange, failure));
+        Message target = this.getChannel(exchange)
+                .retrieveMessageById(messageId)
+                .complete();
+        Object body = exchange.getIn().getBody();
+        if (body instanceof MessageCreateData createData) {
+            exchange.getMessage().setBody(target.reply(createData).complete());
+        } else {
+            exchange.getMessage().setBody(target.reply((String) body).complete());
+        }
     }
 
     protected void messageSend(Exchange exchange) {
-        String message = exchange.getIn().getBody(String.class);
-        this.getChannel(exchange)
-                .sendMessage(message)
-                .queue(ignored -> {}, failure -> fail(exchange, failure));
+        Object body = exchange.getIn().getBody();
+        if (body instanceof MessageCreateData createData) {
+            exchange.getMessage().setBody(this.getChannel(exchange).sendMessage(createData).complete());
+        } else {
+            exchange.getMessage().setBody(this.getChannel(exchange).sendMessage((String) body).complete());
+        }
+    }
+
+    protected void messageEdit(Exchange exchange) {
+        String messageId = exchange.getIn()
+                .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
+        Object body = exchange.getIn().getBody();
+        if (body instanceof MessageEditData editData) {
+            exchange.getMessage().setBody(this.getChannel(exchange).editMessageById(messageId, editData).complete());
+        } else {
+            exchange.getMessage().setBody(this.getChannel(exchange).editMessageById(messageId, (String) body).complete());
+        }
+    }
+
+    protected void messageDelete(Exchange exchange) {
+        String messageId = exchange.getIn()
+                .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
+        this.getChannel(exchange).deleteMessageById(messageId).complete();
+    }
+
+    protected void messageBulkDelete(Exchange exchange) {
+        MessageChannel channel = this.getChannel(exchange);
+        if (!(channel instanceof GuildMessageChannel guildChannel)) {
+            throw new IllegalStateException("Bulk message deletion requires a guild message channel");
+        }
+        java.util.Collection<?> ids = exchange.getIn().getHeader(DiscordConstants.HEADER_MESSAGE_IDS,
+                java.util.Collection.class);
+        java.util.List<String> messageIds = ids.stream()
+                .map(String::valueOf)
+                .toList();
+        guildChannel.deleteMessagesByIds(messageIds).complete();
+    }
+
+    protected void messageRetrieve(Exchange exchange) {
+        String messageId = exchange.getIn()
+                .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
+        exchange.getMessage().setBody(this.getChannel(exchange)
+                .retrieveMessageById(messageId)
+                .complete());
     }
 
     protected void messageReact(Exchange exchange) {
-        String message = exchange.getIn()
+        String messageId = exchange.getIn()
                 .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
-        String emote = exchange.getIn()
-                .getBody(String.class);
+        Object body = exchange.getIn().getBody();
+        Emoji emoji = body instanceof Emoji
+                ? (Emoji) body
+                : Emoji.fromFormatted((String) body);
         this.getChannel(exchange)
-                .addReactionById(message, Emoji.fromUnicode(emote))
-                .queue(ignored -> {}, failure -> fail(exchange, failure));
+                .addReactionById(messageId, emoji)
+                .complete();
     }
 
-    private void fail(Exchange exchange, Throwable failure) {
-        LOG.warn("Discord operation failed", failure);
-        exchange.setException(failure);
+    protected void messageReactRemove(Exchange exchange) {
+        String messageId = exchange.getIn()
+                .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
+        Object body = exchange.getIn().getBody();
+        Emoji emoji = body instanceof Emoji
+                ? (Emoji) body
+                : Emoji.fromFormatted((String) body);
+        this.getChannel(exchange)
+                .removeReactionById(messageId, emoji)
+                .complete();
     }
+
+    protected void messageClearReactions(Exchange exchange) {
+        String messageId = exchange.getIn()
+                .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
+        this.getChannel(exchange)
+                .retrieveMessageById(messageId)
+                .complete()
+                .clearReactions()
+                .complete();
+    }
+
+    protected void messagePin(Exchange exchange) {
+        String messageId = exchange.getIn()
+                .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
+        this.getChannel(exchange)
+                .retrieveMessageById(messageId)
+                .complete()
+                .pin()
+                .complete();
+    }
+
+    protected void messageUnpin(Exchange exchange) {
+        String messageId = exchange.getIn()
+                .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
+        this.getChannel(exchange)
+                .retrieveMessageById(messageId)
+                .complete()
+                .unpin()
+                .complete();
+    }
+
+    protected void messageTyping(Exchange exchange) {
+        this.getChannel(exchange).sendTyping().complete();
+    }
+
 }
