@@ -9,7 +9,6 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DiscordComponentTest extends CamelTestSupport {
@@ -19,9 +18,10 @@ public class DiscordComponentTest extends CamelTestSupport {
         DiscordEndpoint endpoint = (DiscordEndpoint) this
                 .createCamelContext()
                 .getComponent("discord", DiscordComponent.class)
-                .createEndpoint("discord:reply");
+                .createEndpoint("discord:messages?event=onMessageReceived");
 
-        assertEquals(endpoint.getName(), "reply");
+        assertEquals("messages", endpoint.getName());
+        assertEquals(DiscordEvent.onMessageReceived, endpoint.getEvent());
     }
 
     @Test
@@ -35,40 +35,44 @@ public class DiscordComponentTest extends CamelTestSupport {
             String metadata = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
             assertTrue(metadata.contains("\"label\": \"social\""));
             assertTrue(metadata.contains("Apache Camel endpoint for receiving Discord messages"));
-            assertTrue(!metadata.contains("\"event\""));
+            assertTrue(metadata.contains("\"event\""));
+            assertTrue(metadata.contains("\"operation\""));
         }
     }
 
     @Test
-    public void testListenerMethodNameCanBeConfigured() throws Exception {
+    public void testEventCanBeConfiguredOnNamedEndpoint() throws Exception {
         DiscordEndpoint endpoint = (DiscordEndpoint) this
                 .createCamelContext()
                 .getComponent("discord", DiscordComponent.class)
-                .createEndpoint("discord:onMessageUpdate");
+                .createEndpoint("discord:message-events?event=onMessageUpdate");
 
-        assertEquals(endpoint.getName(), "onMessageUpdate");
+        assertEquals("message-events", endpoint.getName());
+        assertEquals(DiscordEvent.onMessageUpdate, endpoint.getEvent());
         assertDoesNotThrow(() -> endpoint.createConsumer(exchange -> {
         }));
     }
 
     @Test
-    public void testProducerMethodNameCanBeConfigured() throws Exception {
+    public void testOperationCanBeConfiguredOnNamedEndpoint() throws Exception {
         DiscordEndpoint endpoint = (DiscordEndpoint) this
                 .createCamelContext()
                 .getComponent("discord", DiscordComponent.class)
-                .createEndpoint("discord:addReactionById");
+                .createEndpoint("discord:message-actions?operation=addReactionById");
 
-        assertEquals(endpoint.getName(), "addReactionById");
+        assertEquals("message-actions", endpoint.getName());
+        assertEquals(DiscordOperation.addReactionById, endpoint.getOperation());
     }
 
     @Test
-    public void testArbitraryListenerNamesAreRejected() throws Exception {
+    public void testEndpointNameIsIndependentFromEvent() throws Exception {
         DiscordEndpoint endpoint = (DiscordEndpoint) this
                 .createCamelContext()
                 .getComponent("discord", DiscordComponent.class)
-                .createEndpoint("discord:ping");
+                .createEndpoint("discord:arbitrary-name?event=onMessageDelete");
 
-        assertThrows(IllegalArgumentException.class, () -> endpoint.createConsumer(exchange -> {
+        assertEquals("arbitrary-name", endpoint.getName());
+        assertDoesNotThrow(() -> endpoint.createConsumer(exchange -> {
         }));
     }
 }

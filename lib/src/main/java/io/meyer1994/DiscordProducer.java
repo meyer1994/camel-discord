@@ -13,28 +13,8 @@ import net.dv8tion.jda.api.utils.messages.MessageEditData;
 public class DiscordProducer extends DefaultProducer {
     private DiscordEndpoint endpoint;
 
-    public static enum Names {
-        sendMessage,
-        editMessageById,
-        deleteMessageById,
-        deleteMessagesByIds,
-        retrieveMessageById,
-        addReactionById,
-        removeReactionById,
-        clearReactions,
-        pin,
-        unpin,
-        sendTyping,
-        reply
-    }
-
     public DiscordProducer(DiscordEndpoint endpoint) {
         super(endpoint);
-
-        if (Names.valueOf(endpoint.getName()) == null) {
-            throw new IllegalArgumentException("Unsupported Discord producer method: " + endpoint.getName());
-        }
-
         this.endpoint = endpoint;
     }
 
@@ -45,7 +25,7 @@ public class DiscordProducer extends DefaultProducer {
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        switch (Names.valueOf(this.endpoint.name)) {
+        switch (this.endpoint.getOperation()) {
             case sendMessage:
                 this.messageSend(exchange);
                 return;
@@ -83,7 +63,7 @@ public class DiscordProducer extends DefaultProducer {
                 this.messageReply(exchange);
                 return;
             default:
-                throw new IllegalArgumentException("Unsupported Discord operation: " + this.endpoint.name);
+                throw new IllegalArgumentException("Unsupported Discord operation: " + this.endpoint.getOperation());
         }
     }
 
@@ -95,18 +75,18 @@ public class DiscordProducer extends DefaultProducer {
                 .getChannelById(MessageChannel.class, channelId);
     }
 
-    private void messageReply(Exchange exchange) {
-        String messageId = exchange.getIn()
+    private String getMessageId(final Exchange exchange) {
+        return exchange.getIn()
                 .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
-        Message target = this.getChannel(exchange)
-                .retrieveMessageById(messageId)
-                .complete();
-        Object body = exchange.getIn().getBody();
-        if (body instanceof MessageCreateData createData) {
-            exchange.getMessage().setBody(target.reply(createData).complete());
-        } else {
-            exchange.getMessage().setBody(target.reply((String) body).complete());
-        }
+    }
+
+    private void messageReply(Exchange exchange) {
+        String messageId = this.getMessageId(exchange);
+        MessageChannel channel = this.getChannel(exchange);
+        Message target = channel.retrieveMessageById(messageId).complete();
+        String body = exchange.getIn().getBody(String.class);
+        Message reply = target.reply(body).complete();
+        exchange.getMessage().setBody(reply);
     }
 
     private void messageSend(Exchange exchange) {
@@ -119,8 +99,7 @@ public class DiscordProducer extends DefaultProducer {
     }
 
     private void messageEdit(Exchange exchange) {
-        String messageId = exchange.getIn()
-                .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
+        String messageId = this.getMessageId(exchange);
         Object body = exchange.getIn().getBody();
         if (body instanceof MessageEditData editData) {
             exchange.getMessage().setBody(this.getChannel(exchange).editMessageById(messageId, editData).complete());
@@ -131,8 +110,7 @@ public class DiscordProducer extends DefaultProducer {
     }
 
     private void messageDelete(Exchange exchange) {
-        String messageId = exchange.getIn()
-                .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
+        String messageId = this.getMessageId(exchange);
         this.getChannel(exchange).deleteMessageById(messageId).complete();
     }
 

@@ -26,12 +26,14 @@ public class DiscordEndpointConfigurer extends PropertyConfigurerSupport impleme
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": target.setBridgeErrorHandler(property(camelContext, boolean.class, value)); return true;
         case "client": target.setClient(property(camelContext, net.dv8tion.jda.api.JDA.class, value)); return true;
+        case "event": target.setEvent(property(camelContext, io.meyer1994.DiscordEvent.class, value)); return true;
         case "exceptionhandler":
         case "exceptionHandler": target.setExceptionHandler(property(camelContext, org.apache.camel.spi.ExceptionHandler.class, value)); return true;
         case "exchangepattern":
         case "exchangePattern": target.setExchangePattern(property(camelContext, org.apache.camel.ExchangePattern.class, value)); return true;
         case "lazystartproducer":
         case "lazyStartProducer": target.setLazyStartProducer(property(camelContext, boolean.class, value)); return true;
+        case "operation": target.setOperation(property(camelContext, io.meyer1994.DiscordOperation.class, value)); return true;
         default: return false;
         }
     }
@@ -47,12 +49,14 @@ public class DiscordEndpointConfigurer extends PropertyConfigurerSupport impleme
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": return boolean.class;
         case "client": return net.dv8tion.jda.api.JDA.class;
+        case "event": return io.meyer1994.DiscordEvent.class;
         case "exceptionhandler":
         case "exceptionHandler": return org.apache.camel.spi.ExceptionHandler.class;
         case "exchangepattern":
         case "exchangePattern": return org.apache.camel.ExchangePattern.class;
         case "lazystartproducer":
         case "lazyStartProducer": return boolean.class;
+        case "operation": return io.meyer1994.DiscordOperation.class;
         default: return null;
         }
     }
@@ -64,12 +68,14 @@ public class DiscordEndpointConfigurer extends PropertyConfigurerSupport impleme
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": return target.isBridgeErrorHandler();
         case "client": return target.getClient();
+        case "event": return target.getEvent();
         case "exceptionhandler":
         case "exceptionHandler": return target.getExceptionHandler();
         case "exchangepattern":
         case "exchangePattern": return target.getExchangePattern();
         case "lazystartproducer":
         case "lazyStartProducer": return target.isLazyStartProducer();
+        case "operation": return target.getOperation();
         default: return null;
         }
     }

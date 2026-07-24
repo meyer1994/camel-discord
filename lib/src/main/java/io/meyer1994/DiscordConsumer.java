@@ -4,29 +4,11 @@ import org.apache.camel.Processor;
 import org.apache.camel.support.DefaultConsumer;
 
 public class DiscordConsumer extends DefaultConsumer {
-    public static enum Names {
-        onMessageReceived,
-        onMessageUpdate,
-        onMessageDelete,
-        onMessageBulkDelete,
-        onMessageReactionAdd,
-        onMessageReactionRemove,
-        onMessageReactionRemoveAll,
-        onMessageReactionRemoveEmoji
-    }
-
     protected DiscordEndpoint endpoint;
     protected DiscordHandler handler;
 
     public DiscordConsumer(DiscordEndpoint endpoint, Processor processor) {
         super(endpoint, processor);
-
-        try {
-            Names.valueOf(endpoint.name);
-        } catch (IllegalArgumentException exception) {
-            throw new IllegalArgumentException("Unsupported Discord listener method: " + endpoint.name);
-        }
-
         this.endpoint = endpoint;
     }
 

@@ -13,8 +13,7 @@ import org.apache.camel.support.DefaultEndpoint;
 import net.dv8tion.jda.api.JDA;
 
 /**
- * Apache Camel endpoint for receiving Discord messages and sending, replying
- * to,
+ * Apache Camel endpoint for receiving Discord messages and sending, replying to,
  * or reacting to Discord messages through a configured JDA client.
  */
 @UriEndpoint(firstVersion = "1.0-SNAPSHOT", scheme = "discord", title = "Discord", syntax = "discord:name", category = {
@@ -24,13 +23,15 @@ public class DiscordEndpoint extends DefaultEndpoint {
     @Metadata(autowired = true)
     protected JDA client;
 
-    /**
-     * For consumers, the exact ListenerAdapter method name to receive. For
-     * producers, the Discord JDA method name to invoke.
-     */
-    @UriPath
+    @UriPath(description = "Endpoint name")
     @Metadata(required = true)
     protected String name;
+
+    @UriParam(label = "consumer", description = "Discord listener event to consume")
+    protected DiscordEvent event;
+
+    @UriParam(label = "producer", description = "Discord operation to execute")
+    protected DiscordOperation operation;
 
     public DiscordEndpoint() {
     }
@@ -64,5 +65,21 @@ public class DiscordEndpoint extends DefaultEndpoint {
 
     public String getName() {
         return name;
+    }
+
+    public DiscordEvent getEvent() {
+        return event;
+    }
+
+    public void setEvent(DiscordEvent event) {
+        this.event = event;
+    }
+
+    public DiscordOperation getOperation() {
+        return operation;
+    }
+
+    public void setOperation(DiscordOperation operation) {
+        this.operation = operation;
     }
 }
