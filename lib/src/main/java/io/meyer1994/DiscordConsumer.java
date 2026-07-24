@@ -1,53 +1,56 @@
 package io.meyer1994;
 
-import java.util.Set;
-
 import org.apache.camel.Processor;
 import org.apache.camel.support.DefaultConsumer;
 
 public class DiscordConsumer extends DefaultConsumer {
-    private static final Set<String> LISTENER_NAMES = Set.of(
-            "onMessageReceived",
-            "onMessageUpdate",
-            "onMessageDelete",
-            "onMessageBulkDelete",
-            "onMessageReactionAdd",
-            "onMessageReactionRemove",
-            "onMessageReactionRemoveAll",
-            "onMessageReactionRemoveEmoji"
-    );
+    public static enum Names {
+        onMessageReceived,
+        onMessageUpdate,
+        onMessageDelete,
+        onMessageBulkDelete,
+        onMessageReactionAdd,
+        onMessageReactionRemove,
+        onMessageReactionRemoveAll,
+        onMessageReactionRemoveEmoji
+    }
 
-    private DiscordEndpoint endpoint;
-    private DiscordHandler handler;
+    protected DiscordEndpoint endpoint;
+    protected DiscordHandler handler;
 
     public DiscordConsumer(DiscordEndpoint endpoint, Processor processor) {
         super(endpoint, processor);
-        
-        if (!LISTENER_NAMES.contains(endpoint.getName())) {
-            throw new IllegalArgumentException("Unsupported Discord listener method: " + endpoint.getName());
+
+        try {
+            Names.valueOf(endpoint.name);
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalArgumentException("Unsupported Discord listener method: " + endpoint.name);
         }
 
         this.endpoint = endpoint;
     }
 
     @Override
-    public DiscordEndpoint getEndpoint() {
-        return this.endpoint;
-    }
-
-    @Override
     protected void doInit() throws Exception {
         super.doInit();
         this.handler = new DiscordHandler(this);
-        this.getEndpoint().getClient().addEventListener(this.handler);
+        this.endpoint.client.addEventListener(this.handler);
     }
 
     @Override
     protected void doStop() throws Exception {
         if (this.handler != null) {
-            this.getEndpoint().getClient().removeEventListener(this.handler);
+            this.endpoint.client.removeEventListener(this.handler);
             this.handler = null;
         }
         super.doStop();
+    }
+
+    public DiscordEndpoint getEndpoint() {
+        return endpoint;
+    }
+
+    public DiscordHandler getHandler() {
+        return handler;
     }
 }

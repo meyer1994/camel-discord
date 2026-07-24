@@ -1,5 +1,8 @@
 package io.meyer1994;
 
+import org.apache.camel.Exchange;
+import org.apache.camel.support.DefaultProducer;
+
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
@@ -7,33 +10,28 @@ import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 import net.dv8tion.jda.api.utils.messages.MessageEditData;
 
-import java.util.Set;
-
-import org.apache.camel.Exchange;
-import org.apache.camel.support.DefaultProducer;
-
 public class DiscordProducer extends DefaultProducer {
-    private static final Set<String> PRODUCER_NAMES = Set.of(
-        "sendMessage",
-        "editMessageById",
-        "deleteMessageById",
-        "deleteMessagesByIds",
-        "retrieveMessageById",
-        "addReactionById",
-        "removeReactionById",
-        "clearReactions",
-        "pin",
-        "unpin",
-        "sendTyping",
-        "reply"
-);
-
     private DiscordEndpoint endpoint;
+
+    public static enum Names {
+        sendMessage,
+        editMessageById,
+        deleteMessageById,
+        deleteMessagesByIds,
+        retrieveMessageById,
+        addReactionById,
+        removeReactionById,
+        clearReactions,
+        pin,
+        unpin,
+        sendTyping,
+        reply
+    }
 
     public DiscordProducer(DiscordEndpoint endpoint) {
         super(endpoint);
-        
-        if (!PRODUCER_NAMES.contains(endpoint.getName())) {
+
+        if (Names.valueOf(endpoint.getName()) == null) {
             throw new IllegalArgumentException("Unsupported Discord producer method: " + endpoint.getName());
         }
 
@@ -47,10 +45,7 @@ public class DiscordProducer extends DefaultProducer {
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        DiscordOperation operation = this.getEndpoint()
-                .getOperation();
-
-        switch (operation) {
+        switch (Names.valueOf(this.endpoint.name)) {
             case sendMessage:
                 this.messageSend(exchange);
                 return;
@@ -88,11 +83,11 @@ public class DiscordProducer extends DefaultProducer {
                 this.messageReply(exchange);
                 return;
             default:
-                throw new IllegalArgumentException("Unsupported Discord operation: " + operation);
+                throw new IllegalArgumentException("Unsupported Discord operation: " + this.endpoint.name);
         }
     }
 
-    protected MessageChannel getChannel(final Exchange exchange) {
+    private MessageChannel getChannel(final Exchange exchange) {
         String channelId = exchange.getIn()
                 .getHeader(DiscordConstants.HEADER_CHANNEL_ID, String.class);
         return this.getEndpoint()
@@ -100,7 +95,7 @@ public class DiscordProducer extends DefaultProducer {
                 .getChannelById(MessageChannel.class, channelId);
     }
 
-    protected void messageReply(Exchange exchange) {
+    private void messageReply(Exchange exchange) {
         String messageId = exchange.getIn()
                 .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
         Message target = this.getChannel(exchange)
@@ -114,7 +109,7 @@ public class DiscordProducer extends DefaultProducer {
         }
     }
 
-    protected void messageSend(Exchange exchange) {
+    private void messageSend(Exchange exchange) {
         Object body = exchange.getIn().getBody();
         if (body instanceof MessageCreateData createData) {
             exchange.getMessage().setBody(this.getChannel(exchange).sendMessage(createData).complete());
@@ -123,24 +118,25 @@ public class DiscordProducer extends DefaultProducer {
         }
     }
 
-    protected void messageEdit(Exchange exchange) {
+    private void messageEdit(Exchange exchange) {
         String messageId = exchange.getIn()
                 .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
         Object body = exchange.getIn().getBody();
         if (body instanceof MessageEditData editData) {
             exchange.getMessage().setBody(this.getChannel(exchange).editMessageById(messageId, editData).complete());
         } else {
-            exchange.getMessage().setBody(this.getChannel(exchange).editMessageById(messageId, (String) body).complete());
+            exchange.getMessage()
+                    .setBody(this.getChannel(exchange).editMessageById(messageId, (String) body).complete());
         }
     }
 
-    protected void messageDelete(Exchange exchange) {
+    private void messageDelete(Exchange exchange) {
         String messageId = exchange.getIn()
                 .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
         this.getChannel(exchange).deleteMessageById(messageId).complete();
     }
 
-    protected void messageBulkDelete(Exchange exchange) {
+    private void messageBulkDelete(Exchange exchange) {
         MessageChannel channel = this.getChannel(exchange);
         if (!(channel instanceof GuildMessageChannel guildChannel)) {
             throw new IllegalStateException("Bulk message deletion requires a guild message channel");
@@ -153,7 +149,7 @@ public class DiscordProducer extends DefaultProducer {
         guildChannel.deleteMessagesByIds(messageIds).complete();
     }
 
-    protected void messageRetrieve(Exchange exchange) {
+    private void messageRetrieve(Exchange exchange) {
         String messageId = exchange.getIn()
                 .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
         exchange.getMessage().setBody(this.getChannel(exchange)
@@ -161,7 +157,7 @@ public class DiscordProducer extends DefaultProducer {
                 .complete());
     }
 
-    protected void messageReact(Exchange exchange) {
+    private void messageReact(Exchange exchange) {
         String messageId = exchange.getIn()
                 .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
         Object body = exchange.getIn().getBody();
@@ -173,7 +169,7 @@ public class DiscordProducer extends DefaultProducer {
                 .complete();
     }
 
-    protected void messageReactRemove(Exchange exchange) {
+    private void messageReactRemove(Exchange exchange) {
         String messageId = exchange.getIn()
                 .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
         Object body = exchange.getIn().getBody();
@@ -185,7 +181,7 @@ public class DiscordProducer extends DefaultProducer {
                 .complete();
     }
 
-    protected void messageClearReactions(Exchange exchange) {
+    private void messageClearReactions(Exchange exchange) {
         String messageId = exchange.getIn()
                 .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
         this.getChannel(exchange)
@@ -195,7 +191,7 @@ public class DiscordProducer extends DefaultProducer {
                 .complete();
     }
 
-    protected void messagePin(Exchange exchange) {
+    private void messagePin(Exchange exchange) {
         String messageId = exchange.getIn()
                 .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
         this.getChannel(exchange)
@@ -205,7 +201,7 @@ public class DiscordProducer extends DefaultProducer {
                 .complete();
     }
 
-    protected void messageUnpin(Exchange exchange) {
+    private void messageUnpin(Exchange exchange) {
         String messageId = exchange.getIn()
                 .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
         this.getChannel(exchange)
@@ -215,7 +211,7 @@ public class DiscordProducer extends DefaultProducer {
                 .complete();
     }
 
-    protected void messageTyping(Exchange exchange) {
+    private void messageTyping(Exchange exchange) {
         this.getChannel(exchange).sendTyping().complete();
     }
 

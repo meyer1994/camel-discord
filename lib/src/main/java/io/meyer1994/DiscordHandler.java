@@ -1,5 +1,7 @@
 package io.meyer1994;
 
+import org.apache.camel.Exchange;
+
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.events.message.MessageBulkDeleteEvent;
 import net.dv8tion.jda.api.events.message.MessageDeleteEvent;
@@ -10,7 +12,6 @@ import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveAllEvent;
 import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveEmojiEvent;
 import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import org.apache.camel.Exchange;
 
 /** Bridges JDA message events into Camel exchanges. */
 public class DiscordHandler extends ListenerAdapter {
@@ -22,7 +23,7 @@ public class DiscordHandler extends ListenerAdapter {
 
     @Override
     public void onMessageReceived(MessageReceivedEvent event) {
-        if (!this.consumer.getEndpoint().getName().equals("onMessageReceived")) {
+        if (!this.consumer.endpoint.name.equals("onMessageReceived")) {
             return;
         }
 
@@ -48,12 +49,12 @@ public class DiscordHandler extends ListenerAdapter {
 
     @Override
     public void onMessageUpdate(MessageUpdateEvent event) {
-        if (!this.consumer.getEndpoint().getName().equals("onMessageUpdate")) {
+        if (!this.consumer.endpoint.name.equals("onMessageUpdate")) {
             return;
         }
 
         Message message = event.getMessage();
-        Exchange exchange = this.consumer.getEndpoint().createExchange();
+        Exchange exchange = this.consumer.endpoint.createExchange();
         exchange.getMessage().setHeader(DiscordConstants.HEADER_EVENT, "onMessageUpdate");
         exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_ID, event.getChannel().getId());
         exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_ID, event.getMessageId());
@@ -73,11 +74,11 @@ public class DiscordHandler extends ListenerAdapter {
 
     @Override
     public void onMessageDelete(MessageDeleteEvent event) {
-        if (!this.consumer.getEndpoint().getName().equals("onMessageDelete")) {
+        if (!this.consumer.endpoint.name.equals("onMessageDelete")) {
             return;
         }
 
-        Exchange exchange = this.consumer.getEndpoint().createExchange();
+        Exchange exchange = this.consumer.endpoint.createExchange();
         exchange.getMessage().setHeader(DiscordConstants.HEADER_EVENT, "onMessageDelete");
         exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_ID, event.getChannel().getId());
         exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_ID, event.getMessageId());
@@ -94,16 +95,17 @@ public class DiscordHandler extends ListenerAdapter {
 
     @Override
     public void onMessageBulkDelete(MessageBulkDeleteEvent event) {
-        if (!this.consumer.getEndpoint().getName().equals("onMessageBulkDelete")) {
+        if (!this.consumer.endpoint.name.equals("onMessageBulkDelete")) {
             return;
         }
 
-        Exchange exchange = this.consumer.getEndpoint().createExchange();
+        Exchange exchange = this.consumer.endpoint.createExchange();
         exchange.getMessage().setHeader(DiscordConstants.HEADER_EVENT, "onMessageBulkDelete");
         exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_ID, event.getChannel().getId());
         exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_TYPE, event.getChannel().getType().name());
         exchange.getMessage().setHeader(DiscordConstants.HEADER_IS_FROM_GUILD, true);
-        exchange.getMessage().setHeader(DiscordConstants.HEADER_IS_FROM_THREAD, event.getChannel().getType().isThread());
+        exchange.getMessage().setHeader(DiscordConstants.HEADER_IS_FROM_THREAD,
+                event.getChannel().getType().isThread());
         exchange.getMessage().setHeader(DiscordConstants.HEADER_GUILD_ID, event.getGuild().getId());
         exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_IDS, event.getMessageIds());
         exchange.getMessage().setBody(event);
@@ -112,11 +114,11 @@ public class DiscordHandler extends ListenerAdapter {
 
     @Override
     public void onMessageReactionAdd(MessageReactionAddEvent event) {
-        if (!this.consumer.getEndpoint().getName().equals("onMessageReactionAdd")) {
+        if (!this.consumer.endpoint.name.equals("onMessageReactionAdd")) {
             return;
         }
 
-        Exchange exchange = this.consumer.getEndpoint().createExchange();
+        Exchange exchange = this.consumer.endpoint.createExchange();
         exchange.getMessage().setHeader(DiscordConstants.HEADER_EVENT, "onMessageReactionAdd");
         exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_ID, event.getChannel().getId());
         exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_ID, event.getMessageId());
@@ -135,11 +137,11 @@ public class DiscordHandler extends ListenerAdapter {
 
     @Override
     public void onMessageReactionRemove(MessageReactionRemoveEvent event) {
-        if (!this.consumer.getEndpoint().getName().equals("onMessageReactionRemove")) {
+        if (!this.consumer.endpoint.name.equals("onMessageReactionRemove")) {
             return;
         }
 
-        Exchange exchange = this.consumer.getEndpoint().createExchange();
+        Exchange exchange = this.consumer.endpoint.createExchange();
         exchange.getMessage().setHeader(DiscordConstants.HEADER_EVENT, "onMessageReactionRemove");
         exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_ID, event.getChannel().getId());
         exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_ID, event.getMessageId());
@@ -157,11 +159,11 @@ public class DiscordHandler extends ListenerAdapter {
 
     @Override
     public void onMessageReactionRemoveAll(MessageReactionRemoveAllEvent event) {
-        if (!this.consumer.getEndpoint().getName().equals("onMessageReactionRemoveAll")) {
+        if (!this.consumer.endpoint.name.equals("onMessageReactionRemoveAll")) {
             return;
         }
 
-        Exchange exchange = this.consumer.getEndpoint().createExchange();
+        Exchange exchange = this.consumer.endpoint.createExchange();
         exchange.getMessage().setHeader(DiscordConstants.HEADER_EVENT, "onMessageReactionRemoveAll");
         exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_ID, event.getChannel().getId());
         exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_ID, event.getMessageId());
@@ -178,11 +180,11 @@ public class DiscordHandler extends ListenerAdapter {
 
     @Override
     public void onMessageReactionRemoveEmoji(MessageReactionRemoveEmojiEvent event) {
-        if (!this.consumer.getEndpoint().getName().equals("onMessageReactionRemoveEmoji")) {
+        if (!this.consumer.endpoint.name.equals("onMessageReactionRemoveEmoji")) {
             return;
         }
 
-        Exchange exchange = this.consumer.getEndpoint().createExchange();
+        Exchange exchange = this.consumer.endpoint.createExchange();
         exchange.getMessage().setHeader(DiscordConstants.HEADER_EVENT, "onMessageReactionRemoveEmoji");
         exchange.getMessage().setHeader(DiscordConstants.HEADER_CHANNEL_ID, event.getChannel().getId());
         exchange.getMessage().setHeader(DiscordConstants.HEADER_MESSAGE_ID, event.getMessageId());

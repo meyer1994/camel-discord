@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -20,7 +21,6 @@ public class DiscordComponentTest extends CamelTestSupport {
                 .getComponent("discord", DiscordComponent.class)
                 .createEndpoint("discord:reply");
 
-        assertEquals(endpoint.getOperation(), DiscordOperation.reply);
         assertEquals(endpoint.getName(), "reply");
     }
 
@@ -47,6 +47,8 @@ public class DiscordComponentTest extends CamelTestSupport {
                 .createEndpoint("discord:onMessageUpdate");
 
         assertEquals(endpoint.getName(), "onMessageUpdate");
+        assertDoesNotThrow(() -> endpoint.createConsumer(exchange -> {
+        }));
     }
 
     @Test
@@ -56,7 +58,7 @@ public class DiscordComponentTest extends CamelTestSupport {
                 .getComponent("discord", DiscordComponent.class)
                 .createEndpoint("discord:addReactionById");
 
-        assertEquals(endpoint.getOperation(), DiscordOperation.addReactionById);
+        assertEquals(endpoint.getName(), "addReactionById");
     }
 
     @Test
