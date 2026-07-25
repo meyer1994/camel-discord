@@ -30,6 +30,10 @@ public class Route extends RouteBuilder {
                                 .log("Event: ${body}")
                                 .transform().simple("log.event: ${body}");
 
+                // generic listener event
+                from("discord:gateway-pings?event=onGatewayPing")
+                                .log("Discord event ${header.x-camel-discord-event}: ${body.newPing} ms");
+
                 // reaction events
                 from("discord:message-updates?event=onMessageUpdate")
                                 .log("Message updated: ${body.message.contentRaw}")
