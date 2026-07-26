@@ -39,7 +39,12 @@ public class DiscordHandler extends ListenerAdapter {
         exchange.getMessage().setHeader(DiscordConstants.HEADER_EVENT, discordEvent.name());
         exchange.getMessage().setBody(event);
         this.populateHeaders(exchange, event);
-        this.process(exchange);
+
+        try {
+            this.consumer.getProcessor().process(exchange);
+        } catch (Exception e) {
+            exchange.setException(e);
+        }
     }
 
     private void populateHeaders(Exchange exchange, GenericEvent event) {
@@ -168,13 +173,5 @@ public class DiscordHandler extends ListenerAdapter {
 
     private void setIsWebhookHeaders(Exchange exchange, MessageReceivedEvent event) {
         exchange.getMessage().setHeader(DiscordConstants.HEADER_IS_WEBHOOK, event.isWebhookMessage());
-    }
-
-    private void process(Exchange exchange) {
-        try {
-            this.consumer.getProcessor().process(exchange);
-        } catch (Exception e) {
-            exchange.setException(e);
-        }
     }
 }

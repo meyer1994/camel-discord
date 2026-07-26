@@ -1,14 +1,10 @@
 package io.meyer1994;
 
-import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.events.GenericEvent;
-import net.dv8tion.jda.api.events.session.SessionInvalidateEvent;
-import net.dv8tion.jda.api.events.session.SessionResumeEvent;
-import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import org.apache.camel.Exchange;
-import org.apache.camel.Processor;
-import org.apache.camel.test.junit5.CamelTestSupport;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -18,11 +14,16 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.apache.camel.Exchange;
+import org.apache.camel.Processor;
+import org.apache.camel.test.junit5.CamelTestSupport;
+import org.junit.jupiter.api.Test;
+
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.events.GenericEvent;
+import net.dv8tion.jda.api.events.session.SessionInvalidateEvent;
+import net.dv8tion.jda.api.events.session.SessionResumeEvent;
+import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
 class DiscordHandlerListenerCoverageTest extends CamelTestSupport {
 

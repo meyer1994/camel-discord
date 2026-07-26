@@ -24,9 +24,13 @@ public class DiscordEndpointUriFactory extends org.apache.camel.support.componen
     private static final Set<String> ENDPOINT_IDENTITY_PROPERTY_NAMES;
     private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(8);
+        Set<String> props = new HashSet<>(12);
         props.add("bridgeErrorHandler");
         props.add("client");
+        props.add("consumerWorkerPoolEnabled");
+        props.add("consumerWorkerPoolExecutorService");
+        props.add("consumerWorkerPoolMaxSize");
+        props.add("consumerWorkerPoolSize");
         props.add("event");
         props.add("exceptionHandler");
         props.add("exchangePattern");

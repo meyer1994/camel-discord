@@ -1,9 +1,11 @@
 package io.meyer1994;
 
+import java.util.Collection;
+import java.util.List;
+
 import org.apache.camel.Exchange;
 import org.apache.camel.support.DefaultProducer;
 
-import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
@@ -81,116 +83,111 @@ public class DiscordProducer extends DefaultProducer {
     }
 
     private void messageReply(Exchange exchange) {
-        String messageId = this.getMessageId(exchange);
-        MessageChannel channel = this.getChannel(exchange);
-        Message target = channel.retrieveMessageById(messageId).complete();
-        String body = exchange.getIn().getBody(String.class);
-        Message reply = target.reply(body).complete();
-        exchange.getMessage().setBody(reply);
+        Object body = exchange.getIn().getBody();
+
+        if (body instanceof MessageCreateData data) {
+            this.getChannel(exchange)
+                    .retrieveMessageById(this.getMessageId(exchange))
+                    .queue(msg -> msg.reply(data).queue());
+        } else {
+            this.getChannel(exchange)
+                    .retrieveMessageById(this.getMessageId(exchange))
+                    .queue(msg -> msg.reply(body.toString()).queue());
+        }
     }
 
     private void messageSend(Exchange exchange) {
         Object body = exchange.getIn().getBody();
-        if (body instanceof MessageCreateData createData) {
-            exchange.getMessage().setBody(this.getChannel(exchange).sendMessage(createData).complete());
+
+        if (body instanceof MessageCreateData data) {
+            this.getChannel(exchange).sendMessage(data).queue();
         } else {
-            exchange.getMessage().setBody(this.getChannel(exchange).sendMessage((String) body).complete());
+            this.getChannel(exchange).sendMessage(body.toString()).queue();
         }
     }
 
     private void messageEdit(Exchange exchange) {
-        String messageId = this.getMessageId(exchange);
         Object body = exchange.getIn().getBody();
+
         if (body instanceof MessageEditData editData) {
-            exchange.getMessage().setBody(this.getChannel(exchange).editMessageById(messageId, editData).complete());
+            this.getChannel(exchange)
+                    .retrieveMessageById(this.getMessageId(exchange))
+                    .queue(msg -> msg.editMessage(editData).queue());
         } else {
-            exchange.getMessage()
-                    .setBody(this.getChannel(exchange).editMessageById(messageId, (String) body).complete());
+            this.getChannel(exchange)
+                    .retrieveMessageById(this.getMessageId(exchange))
+                    .queue(msg -> msg.editMessage(body.toString()).queue());
         }
     }
 
     private void messageDelete(Exchange exchange) {
-        String messageId = this.getMessageId(exchange);
-        this.getChannel(exchange).deleteMessageById(messageId).complete();
+        this.getChannel(exchange)
+                .retrieveMessageById(this.getMessageId(exchange))
+                .queue(msg -> msg.delete().queue());
     }
 
     private void messageBulkDelete(Exchange exchange) {
         MessageChannel channel = this.getChannel(exchange);
-        if (!(channel instanceof GuildMessageChannel guildChannel)) {
+
+        if (!(channel instanceof GuildMessageChannel guild)) {
             throw new IllegalStateException("Bulk message deletion requires a guild message channel");
         }
-        java.util.Collection<?> ids = exchange.getIn().getHeader(DiscordConstants.HEADER_MESSAGE_IDS,
-                java.util.Collection.class);
-        java.util.List<String> messageIds = ids.stream()
-                .map(String::valueOf)
-                .toList();
-        guildChannel.deleteMessagesByIds(messageIds).complete();
+
+        Collection<?> ids = exchange.getIn().getHeader(DiscordConstants.HEADER_MESSAGE_IDS, Collection.class);
+        List<String> messageIds = ids.stream().map(String::valueOf).toList();
+        guild.deleteMessagesByIds(messageIds).queue();
     }
 
     private void messageRetrieve(Exchange exchange) {
-        String messageId = exchange.getIn()
-                .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
-        exchange.getMessage().setBody(this.getChannel(exchange)
-                .retrieveMessageById(messageId)
-                .complete());
+        this.getChannel(exchange)
+                .retrieveMessageById(this.getMessageId(exchange))
+                .submit();
     }
 
     private void messageReact(Exchange exchange) {
-        String messageId = exchange.getIn()
-                .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
         Object body = exchange.getIn().getBody();
+
         Emoji emoji = body instanceof Emoji
                 ? (Emoji) body
                 : Emoji.fromFormatted((String) body);
+
         this.getChannel(exchange)
-                .addReactionById(messageId, emoji)
-                .complete();
+                .retrieveMessageById(this.getMessageId(exchange))
+                .queue(msg -> msg.addReaction(emoji).queue());
     }
 
     private void messageReactRemove(Exchange exchange) {
-        String messageId = exchange.getIn()
-                .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
         Object body = exchange.getIn().getBody();
+
         Emoji emoji = body instanceof Emoji
                 ? (Emoji) body
                 : Emoji.fromFormatted((String) body);
+
         this.getChannel(exchange)
-                .removeReactionById(messageId, emoji)
-                .complete();
+                .retrieveMessageById(this.getMessageId(exchange))
+                .queue(msg -> msg.removeReaction(emoji).queue());
     }
 
     private void messageClearReactions(Exchange exchange) {
-        String messageId = exchange.getIn()
-                .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
         this.getChannel(exchange)
-                .retrieveMessageById(messageId)
-                .complete()
-                .clearReactions()
-                .complete();
+                .retrieveMessageById(this.getMessageId(exchange))
+                .queue(msg -> msg.clearReactions().queue());
     }
 
     private void messagePin(Exchange exchange) {
-        String messageId = exchange.getIn()
-                .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
         this.getChannel(exchange)
-                .retrieveMessageById(messageId)
-                .complete()
-                .pin()
-                .complete();
+                .retrieveMessageById(this.getMessageId(exchange))
+                .queue(msg -> msg.pin().queue());
     }
 
     private void messageUnpin(Exchange exchange) {
-        String messageId = exchange.getIn()
-                .getHeader(DiscordConstants.HEADER_MESSAGE_ID, String.class);
         this.getChannel(exchange)
-                .retrieveMessageById(messageId)
-                .complete()
-                .unpin()
-                .complete();
+                .retrieveMessageById(this.getMessageId(exchange))
+                .queue(msg -> msg.unpin().queue());
     }
 
     private void messageTyping(Exchange exchange) {
-        this.getChannel(exchange).sendTyping().complete();
+        this.getChannel(exchange).sendTyping().queue();
     }
 
 }
