@@ -34,6 +34,12 @@
       <artifactId>camel-sql</artifactId>
     </dependency>
 
+    <!-- Camel SEDA -->
+    <dependency>
+      <groupId>org.apache.camel</groupId>
+      <artifactId>camel-seda</artifactId>
+    </dependency>
+
     <!-- Camel Main -->
     <dependency>
       <groupId>org.apache.camel</groupId>
