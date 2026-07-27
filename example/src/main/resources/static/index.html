@@ -1,43 +1,204 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Twitch Chat</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/charts.css/dist/charts.min.css">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css">
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <script src="https://unpkg.com/htmx.org@2.0.7"></script>
   <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
 </head>
-<body class="min-h-screen bg-slate-950 text-slate-100">
-  <main class="mx-auto max-w-3xl px-4 py-10">
-    <header class="mb-8">
-      <p class="text-sm font-semibold uppercase tracking-widest text-violet-400">Live stream</p>
-      <h1 class="mt-2 text-4xl font-bold">Twitch Chat</h1>
-      <p class="mt-2 text-slate-400">Showing #__CHANNEL__</p>
-    </header>
+<body class="min-h-screen bg-base-300 text-base-content">
+  <div class="navbar border-b border-base-300 bg-base-100 px-4 shadow-sm lg:px-8">
+    <div class="flex-1">
+      <span class="text-xl font-bold">Twitch Chat</span>
+    </div>
+    <div class="flex-none">
+      <span class="badge badge-primary badge-outline">#__CHANNEL__</span>
+    </div>
+  </div>
 
-    <section class="mb-8 overflow-hidden rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-xl">
-      <div class="mb-4 text-sm font-semibold text-slate-300">Emoji usage</div>
-      <div id="emoji-chart"
-           hx-get="/emoji-chart"
-           hx-trigger="load, every 5s"
-           hx-swap="innerHTML">
-        <p class="text-sm text-slate-400">Loading...</p>
-      </div>
-    </section>
+  <main class="mx-auto max-w-7xl p-4 lg:p-8">
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
+      <section class="space-y-6">
+        <div class="grid gap-4 sm:grid-cols-3">
+          <div class="stat rounded-box bg-base-100 shadow">
+            <div class="stat-title">Messages / hour</div>
+            <div id="message-total" class="stat-value text-primary">0</div>
+            <div class="stat-desc">Updated every 5 seconds</div>
+          </div>
+          <div class="stat rounded-box bg-base-100 shadow">
+            <div class="stat-title">Peak chatters</div>
+            <div id="chatter-peak" class="stat-value text-secondary">0</div>
+            <div class="stat-desc">Unique users in one minute</div>
+          </div>
+          <div class="stat rounded-box bg-base-100 shadow">
+            <div class="stat-title">Top emoji</div>
+            <div id="top-emoji" class="stat-value">—</div>
+            <div id="top-emoji-count" class="stat-desc">No data yet</div>
+          </div>
+        </div>
 
-    <section class="overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-xl">
-      <div class="border-b border-slate-800 px-5 py-3 text-sm font-semibold text-slate-300">
-        Messages
-      </div>
-      <ul id="messages"
-          class="divide-y divide-slate-800"
-          hx-ext="sse"
-          sse-connect="/events?channel=__CHANNEL__"
-          sse-swap="chat"
-          hx-swap="beforeend"></ul>
-    </section>
+        <div class="card bg-base-100 shadow">
+          <div class="card-body">
+            <h2 class="card-title">Messages per minute</h2>
+            <div id="messages-chart" class="h-72 w-full"></div>
+          </div>
+        </div>
+
+        <div class="card bg-base-100 shadow">
+          <div class="card-body">
+            <h2 class="card-title">Unique chatters per minute</h2>
+            <div id="chatters-chart" class="h-72 w-full"></div>
+          </div>
+        </div>
+
+        <div class="card bg-base-100 shadow">
+          <div class="card-body">
+            <h2 class="card-title">Top emojis</h2>
+            <div id="emojis-chart" class="h-72 w-full"></div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="card h-[calc(100vh-7rem)] min-h-[32rem] bg-base-100 shadow lg:sticky lg:top-6">
+        <div class="card-body min-h-0 gap-0 p-0">
+          <div class="flex items-center justify-between border-b border-base-300 px-5 py-4">
+            <h2 class="card-title text-lg">Live chat</h2>
+            <span class="badge badge-success badge-sm">LIVE</span>
+          </div>
+          <div id="messages"
+               class="min-h-0 flex-1 space-y-0 overflow-y-auto p-2"
+               hx-ext="sse"
+               sse-connect="/events?channel=__CHANNEL__"
+               sse-swap="chat"
+               hx-swap="beforeend">
+          </div>
+        </div>
+      </aside>
+    </div>
   </main>
+
+  <script>
+    const channel = "__CHANNEL__";
+    const charts = [];
+
+    function createLineChart(elementId, color) {
+      const chart = echarts.init(document.getElementById(elementId));
+      chart.setOption({
+        animation: false,
+        textStyle: { color: "#a6adbb" },
+        grid: { top: 16, right: 16, bottom: 32, left: 42 },
+        tooltip: { trigger: "axis" },
+        xAxis: {
+          type: "time",
+          axisLabel: { hideOverlap: true, color: "#a6adbb" },
+          axisLine: { lineStyle: { color: "#334155" } }
+        },
+        yAxis: {
+          type: "value",
+          minInterval: 1,
+          axisLabel: { color: "#a6adbb" },
+          splitLine: { lineStyle: { color: "#1e293b" } }
+        },
+        series: [{
+          type: "line",
+          smooth: true,
+          showSymbol: false,
+          areaStyle: { opacity: 0.15 },
+          lineStyle: { width: 3 },
+          itemStyle: { color },
+          data: []
+        }]
+      });
+      charts.push(chart);
+      return chart;
+    }
+
+    const messagesChart = createLineChart("messages-chart", "#570df8");
+    const chattersChart = createLineChart("chatters-chart", "#f000b8");
+    const emojisChart = echarts.init(document.getElementById("emojis-chart"));
+    emojisChart.setOption({
+      animation: false,
+      textStyle: { color: "#a6adbb" },
+      grid: { top: 16, right: 24, bottom: 32, left: 48 },
+      tooltip: { trigger: "axis" },
+      xAxis: {
+        type: "value",
+        minInterval: 1,
+        axisLabel: { color: "#a6adbb" },
+        splitLine: { lineStyle: { color: "#1e293b" } }
+      },
+      yAxis: { type: "category", data: [], axisLabel: { color: "#a6adbb" } },
+      series: [{
+        type: "bar",
+        itemStyle: { color: "#37cdbe", borderRadius: [0, 4, 4, 0] },
+        data: []
+      }]
+    });
+    charts.push(emojisChart);
+
+    async function getJson(path) {
+      const response = await fetch(`${path}?channel=${encodeURIComponent(channel)}`);
+      return response.json();
+    }
+
+    async function refreshMessages() {
+      const data = await getJson("/api/stats/messages");
+      const points = data.points.map(point => [point.time, point.value]);
+      messagesChart.setOption({ series: [{ data: points }] });
+      document.getElementById("message-total").textContent =
+        points.reduce((total, point) => total + point[1], 0).toLocaleString();
+    }
+
+    async function refreshChatters() {
+      const data = await getJson("/api/stats/chatters");
+      const points = data.points.map(point => [point.time, point.value]);
+      chattersChart.setOption({ series: [{ data: points }] });
+      document.getElementById("chatter-peak").textContent =
+        Math.max(0, ...points.map(point => point[1])).toLocaleString();
+    }
+
+    async function refreshEmojis() {
+      const data = await getJson("/api/stats/emojis");
+      const items = data.items;
+      emojisChart.setOption({
+        yAxis: { data: items.map(item => item.emoji).reverse() },
+        series: [{ data: items.map(item => item.count).reverse() }]
+      });
+
+      const top = items[0];
+      document.getElementById("top-emoji").textContent = top ? top.emoji : "—";
+      document.getElementById("top-emoji-count").textContent = top
+        ? `${top.count.toLocaleString()} uses in stored messages`
+        : "No data yet";
+    }
+
+    function refreshAll() {
+      refreshMessages().catch(console.error);
+      refreshChatters().catch(console.error);
+      refreshEmojis().catch(console.error);
+    }
+
+    refreshAll();
+    setInterval(refreshAll, 5000);
+    window.addEventListener("resize", () => charts.forEach(chart => chart.resize()));
+
+    function scrollChat(event) {
+      const target = event.detail?.target || event.target;
+      if (target?.id !== "messages") {
+        return;
+      }
+
+      requestAnimationFrame(() => {
+        target.scrollTop = target.scrollHeight;
+      });
+    }
+
+    document.body.addEventListener("htmx:afterSettle", scrollChat);
+  </script>
 </body>
 </html>

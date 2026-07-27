@@ -3,6 +3,9 @@ package io.meyer1994.example;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.Endpoint;
@@ -17,8 +20,17 @@ import reactor.core.publisher.Sinks;
 @Service
 public class TwitchStreamService {
     private static final String MESSAGE_TEMPLATE = """
-            <li class="px-5 py-4"><span class="font-semibold text-violet-300">%s:</span> %s</li>
+            <div class="chat chat-start py-0.5" title="%s">
+              <div class="chat-header gap-1 text-xs leading-tight">
+                %s
+                <time class="opacity-50" title="%s">%s</time>
+              </div>
+              <div class="chat-bubble min-h-0 px-3 py-1.5 text-sm leading-tight">%s</div>
+            </div>
             """.strip();
+
+    private static final DateTimeFormatter CHAT_TIME_FORMAT =
+            DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault());
 
     private final CamelContext context;
     private final Map<String, Sinks.Many<ServerSentEvent<String>>> sinks = new ConcurrentHashMap<>();
@@ -48,8 +60,12 @@ public class TwitchStreamService {
         if (sink == null)
             return;
 
+        Instant createdAt = Instant.now();
         String html = MESSAGE_TEMPLATE.formatted(
+                createdAt,
                 escapeHtml(event.getUser().getName()),
+                createdAt,
+                CHAT_TIME_FORMAT.format(createdAt),
                 escapeHtml(event.getMessage()));
 
         ServerSentEvent.Builder<String> builder = ServerSentEvent.builder(html);
