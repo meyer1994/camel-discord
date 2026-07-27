@@ -1,8 +1,8 @@
 package io.meyer1994.example;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
@@ -23,14 +23,13 @@ public class ChatController {
 
     @GetMapping(path = "/", produces = MediaType.TEXT_HTML_VALUE)
     public String page(@RequestParam("channel") String channel) throws IOException {
-        String normalizedChannel = streamService.normalizeChannel(channel);
         return new ClassPathResource("static/index.html")
                 .getContentAsString(StandardCharsets.UTF_8)
-                .replace("__CHANNEL__", URLEncoder.encode(normalizedChannel, StandardCharsets.UTF_8));
+                .replace("__CHANNEL__", URLEncoder.encode(channel, StandardCharsets.UTF_8));
     }
 
     @GetMapping(path = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<ServerSentEvent<String>> events(@RequestParam("channel") String channel) {
+    public Flux<ServerSentEvent<String>> events(@RequestParam("channel") String channel) throws Exception {
         return streamService.stream(channel);
     }
 }

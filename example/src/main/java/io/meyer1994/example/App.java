@@ -9,9 +9,6 @@ import org.springframework.context.annotation.Profile;
 import com.github.twitch4j.chat.ITwitchChat;
 import com.github.twitch4j.chat.TwitchChatBuilder;
 
-import reactor.core.scheduler.Scheduler;
-import reactor.core.scheduler.Schedulers;
-
 @SpringBootApplication
 public class App {
     public static void main(String[] args) {
@@ -27,11 +24,4 @@ public class App {
                 .build();
     }
 
-    @Bean(destroyMethod = "dispose")
-    Scheduler routeLifecycleScheduler() {
-        return Schedulers.newBoundedElastic(
-                2,
-                100,
-                "twitch-route-lifecycle");
-    }
 }

@@ -28,6 +28,23 @@
       <artifactId>camel-spring-boot-starter</artifactId>
     </dependency>
 
+    <!-- Camel SQL -->
+    <dependency>
+      <groupId>org.apache.camel.springboot</groupId>
+      <artifactId>camel-sql-starter</artifactId>
+    </dependency>
+
+    <!-- H2 database -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-jdbc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
     <!-- Spring WebFlux -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
