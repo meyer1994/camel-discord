@@ -68,6 +68,21 @@ public class ChatController {
                 .toList());
     }
 
+    @GetMapping(path = "/api/stats/categories", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Map<String, Object> categoryStats(@RequestParam("channel") String channel) {
+        return Map.of("items", categoryRows(channel).stream()
+                .map(row -> Map.of(
+                        "category", row.get("CATEGORY"),
+                        "count", ((Number) row.get("AMOUNT")).longValue()))
+                .toList());
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> categoryRows(String channel) {
+        return producerTemplate.requestBodyAndHeader(
+                "direct:aiCategoryCounts", null, "channel", channel, List.class);
+    }
+
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> timeSeries(String route, String channel) {
         List<Map<String, Object>> rows = producerTemplate.requestBodyAndHeader(
