@@ -34,6 +34,12 @@
       <artifactId>camel-sql-starter</artifactId>
     </dependency>
 
+    <!-- Camel OpenAI -->
+    <dependency>
+      <groupId>org.apache.camel.springboot</groupId>
+      <artifactId>camel-openai-starter</artifactId>
+    </dependency>
+
     <!-- H2 database -->
     <dependency>
       <groupId>org.springframework.boot</groupId>

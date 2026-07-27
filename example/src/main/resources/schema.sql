@@ -7,5 +7,13 @@ CREATE TABLE IF NOT EXISTS twitch_chat_messages (
     message_id VARCHAR(64),
     message VARCHAR(4096) NOT NULL,
     raw_event CLOB NOT NULL,
+    ai_category VARCHAR(512),
+    embedding CLOB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+ALTER TABLE twitch_chat_messages
+    ADD COLUMN IF NOT EXISTS ai_category VARCHAR(512);
+
+ALTER TABLE twitch_chat_messages
+    ADD COLUMN IF NOT EXISTS embedding CLOB;
