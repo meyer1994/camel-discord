@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Twitch Chat</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/charts.css/dist/charts.min.css">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/htmx.org@2.0.7"></script>
   <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
@@ -15,6 +16,16 @@
       <h1 class="mt-2 text-4xl font-bold">Twitch Chat</h1>
       <p class="mt-2 text-slate-400">Showing #__CHANNEL__</p>
     </header>
+
+    <section class="mb-8 overflow-hidden rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-xl">
+      <div class="mb-4 text-sm font-semibold text-slate-300">Emoji usage</div>
+      <div id="emoji-chart"
+           hx-get="/emoji-chart"
+           hx-trigger="load, every 5s"
+           hx-swap="innerHTML">
+        <p class="text-sm text-slate-400">Loading...</p>
+      </div>
+    </section>
 
     <section class="overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-xl">
       <div class="border-b border-slate-800 px-5 py-3 text-sm font-semibold text-slate-300">
