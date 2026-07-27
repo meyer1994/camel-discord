@@ -3,6 +3,12 @@ package io.meyer1994.example;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.camel.ProducerTemplate;
@@ -39,46 +45,52 @@ public class ChatController {
 
     @GetMapping(path = "/emoji-counts", produces = MediaType.APPLICATION_JSON_VALUE)
     @SuppressWarnings("unchecked")
-    public Map<String, Long> emojiCounts() {
-        return producerTemplate.requestBody("direct:emojiCounts", null, Map.class);
+    public Map<String, Long> emojiCounts(@RequestParam("channel") String channel) {
+        return producerTemplate.requestBodyAndHeader(
+                "direct:emojiCounts", null, "channel", channel, Map.class);
     }
 
-    @GetMapping(path = "/emoji-chart", produces = MediaType.TEXT_HTML_VALUE)
-    public String emojiChart() {
-        Map<String, Long> counts = emojiCounts();
+    @GetMapping(path = "/api/stats/messages", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Map<String, Object> messageStats(@RequestParam("channel") String channel) {
+        return Map.of("points", timeSeries("direct:messageStats", channel));
+    }
 
-        if (counts.isEmpty()) {
-            return "<p class=\"text-sm text-slate-400\">No emoji messages yet.</p>";
+    @GetMapping(path = "/api/stats/chatters", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Map<String, Object> chatterStats(@RequestParam("channel") String channel) {
+        return Map.of("points", timeSeries("direct:chatterStats", channel));
+    }
+
+    @GetMapping(path = "/api/stats/emojis", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Map<String, Object> emojiStats(@RequestParam("channel") String channel) {
+        return Map.of("items", emojiCounts(channel).entrySet().stream()
+                .limit(8)
+                .map(entry -> Map.of("emoji", entry.getKey(), "count", entry.getValue()))
+                .toList());
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> timeSeries(String route, String channel) {
+        List<Map<String, Object>> rows = producerTemplate.requestBodyAndHeader(
+                route, null, "channel", channel, List.class);
+        Map<LocalDateTime, Long> values = new HashMap<>();
+
+        for (Map<String, Object> row : rows) {
+            Timestamp bucket = (Timestamp) row.get("BUCKET");
+            Number amount = (Number) row.get("AMOUNT");
+            values.put(bucket.toLocalDateTime(), amount.longValue());
         }
 
-        long maximum = counts.values().stream()
-                .mapToLong(Long::longValue)
-                .max()
-                .orElse(1L);
+        LocalDateTime end = LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES);
+        LocalDateTime start = end.minusMinutes(59);
+        List<Map<String, Object>> points = new ArrayList<>();
 
-        StringBuilder html = new StringBuilder();
-        html.append("<table class=\"charts-css bar show-labels show-data-axes w-full\">")
-                .append("<caption>Emoji usage</caption><tbody>");
+        for (int minute = 0; minute < 60; minute++) {
+            LocalDateTime bucket = start.plusMinutes(minute);
+            points.add(Map.of(
+                    "time", bucket.toString(),
+                    "value", values.getOrDefault(bucket, 0L)));
+        }
 
-        counts.entrySet().stream()
-                .limit(8)
-                .forEach(entry -> html.append("<tr><th scope=\"row\">")
-                        .append(escapeHtml(entry.getKey()))
-                        .append("</th><td style=\"--size: ")
-                        .append((double) entry.getValue() / maximum)
-                        .append("\"><span class=\"data\">")
-                        .append(entry.getValue())
-                        .append("</span></td></tr>"));
-
-        return html.append("</tbody></table>").toString();
-    }
-
-    private String escapeHtml(String value) {
-        return value
-                .replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&#39;");
+        return points;
     }
 }
