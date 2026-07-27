@@ -5,21 +5,21 @@
 
   <parent>
     <groupId>io.meyer1994</groupId>
-    <artifactId>camel-discord-parent</artifactId>
+    <artifactId>camel-twitch-parent</artifactId>
     <version>0.0.2-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>camel-discord</artifactId>
+  <artifactId>camel-twitch</artifactId>
   <packaging>jar</packaging>
 
-  <name>Camel Discord Component</name>
+  <name>Camel Twitch Component</name>
 
   <dependencies>
-    <!-- discord -->
+    <!-- Twitch chat -->
     <dependency>
-      <groupId>net.dv8tion</groupId>
-      <artifactId>JDA</artifactId>
+      <groupId>com.github.twitch4j</groupId>
+      <artifactId>twitch4j-chat</artifactId>
     </dependency>
 
     <!-- camel -->

@@ -6,19 +6,19 @@
 
   <parent>
     <groupId>io.meyer1994</groupId>
-    <artifactId>camel-discord-parent</artifactId>
+    <artifactId>camel-twitch-parent</artifactId>
     <version>0.0.2-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>camel-discord-example</artifactId>
-  <name>Camel Discord Example</name>
+  <artifactId>camel-twitch-example</artifactId>
+  <name>Camel Twitch Example</name>
 
   <dependencies>
-    <!-- Camel Discord -->
+    <!-- Camel Twitch -->
     <dependency>
       <groupId>io.meyer1994</groupId>
-      <artifactId>camel-discord</artifactId>
+      <artifactId>camel-twitch</artifactId>
       <version>${project.version}</version>
     </dependency>
 
@@ -28,35 +28,16 @@
       <artifactId>camel-core</artifactId>
     </dependency>
 
-    <!-- Camel SQL -->
-    <dependency>
-      <groupId>org.apache.camel</groupId>
-      <artifactId>camel-sql</artifactId>
-    </dependency>
-
-    <!-- Camel SEDA -->
-    <dependency>
-      <groupId>org.apache.camel</groupId>
-      <artifactId>camel-seda</artifactId>
-    </dependency>
-
     <!-- Camel Main -->
     <dependency>
       <groupId>org.apache.camel</groupId>
       <artifactId>camel-main</artifactId>
     </dependency>
 
-    <!-- Discord API -->
+    <!-- Twitch Chat -->
     <dependency>
-      <groupId>net.dv8tion</groupId>
-      <artifactId>JDA</artifactId>
-    </dependency>
-
-    <!-- H2 Database -->
-    <dependency>
-      <groupId>com.h2database</groupId>
-      <artifactId>h2</artifactId>
-      <version>2.3.232</version>
+      <groupId>com.github.twitch4j</groupId>
+      <artifactId>twitch4j-chat</artifactId>
     </dependency>
 
     <!-- Logging -->

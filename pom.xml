@@ -5,11 +5,11 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>io.meyer1994</groupId>
-  <artifactId>camel-discord-parent</artifactId>
+  <artifactId>camel-twitch-parent</artifactId>
   <version>0.0.2-SNAPSHOT</version>
   <packaging>pom</packaging>
 
-  <name>Camel Discord</name>
+  <name>Camel Twitch</name>
 
   <modules>
     <module>lib</module>
@@ -21,7 +21,7 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <maven.compiler.release>21</maven.compiler.release>
     <camel.version>4.21.0</camel.version>
-    <jda.version>6.5.0</jda.version>
+    <twitch4j.version>1.26.0</twitch4j.version>
   </properties>
 
   <dependencyManagement>
@@ -35,10 +35,11 @@
       </dependency>
 
       <dependency>
-        <groupId>net.dv8tion</groupId>
-        <artifactId>JDA</artifactId>
-        <version>${jda.version}</version>
+        <groupId>com.github.twitch4j</groupId>
+        <artifactId>twitch4j-chat</artifactId>
+        <version>${twitch4j.version}</version>
       </dependency>
+
     </dependencies>
   </dependencyManagement>
 
@@ -51,6 +52,7 @@
           <version>3.12.1</version>
           <configuration>
             <release>${maven.compiler.release}</release>
+            <proc>full</proc>
           </configuration>
         </plugin>
 

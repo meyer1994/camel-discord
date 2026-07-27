@@ -1,0 +1,59 @@
+= Twitch Component
+:doctitle: Twitch
+:shortname: twitch
+:artifactid: camel-twitch
+:description: Receive Twitch chat messages through an externally managed Twitch4J chat client.
+:since: 0.0.2
+:supportlevel: Preview
+
+The Twitch component integrates Apache Camel with the
+https://twitch4j.github.io/[Twitch4J] chat library.
+
+== URI format
+
+[source,text]
+----
+twitch:channel[?options]
+----
+
+The `channel` path value is the Twitch channel login. It is normalized to
+lowercase.
+
+== Client setup
+
+Create an `ITwitchChat` client and make it available through the Camel registry.
+Omitting `withChatAccount` creates an anonymous read-only chat connection.
+
+[source,java]
+----
+ITwitchChat client = TwitchChatBuilder.builder()
+    .withAutoJoinOwnChannel(false)
+    .build();
+----
+
+The application owns the client lifecycle. The component joins and leaves
+channels but does not close the client.
+
+== Consumer
+
+Consumers emit `ChannelMessageEvent` as the exchange body and populate Twitch
+channel, user, and message headers.
+
+[source,java]
+----
+from("twitch:twitch")
+    .log("${body.user.name}: ${body.message}");
+----
+
+== Component options
+
+// component options: START
+include::partial$component-configure-options.adoc[]
+include::partial$component-endpoint-options.adoc[]
+include::partial$component-endpoint-headers.adoc[]
+// component options: END
+
+== See also
+
+* https://twitch4j.github.io/chat/[Twitch4J chat documentation]
+* https://dev.twitch.tv/docs/chat/[Twitch chat documentation]

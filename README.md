@@ -1,115 +1,59 @@
-# Camel Discord Component
+# Camel Twitch Component
 
 [![build](https://github.com/meyer1994/camel-discord/actions/workflows/build.yml/badge.svg)](https://github.com/meyer1994/camel-discord/actions/workflows/build.yml)
-[![standard-readme compliant](https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square)](https://github.com/RichardLitt/standard-readme)
 
-This was way harder to do than it should have been
+An Apache Camel component for consuming Twitch chat messages through
+[Twitch4J](https://twitch4j.github.io/).
 
-## Table of Contents
+## Requirements
 
-- [About](#about)
-- [Project layout](#project-layout)
-- [Install](#install)
-- [Run the example](#run-the-example)
-- [Usage](#usage)
-- [Thanks](#thanks)
-
-## About
-
-Once I wanted to create a Discord bot that could be used as an interface to 
-many other things. Reboot an EC2 instance on AWS, send an e-mail, etc. 
-
-[Apache Camel][1] is an integrations library. Adding a Discord component to it 
-makes Discord very powerful. This is my attempt on creating a component.
+- Java 21 or newer
+- Apache Camel 4.x
+- Maven
 
 ## Project layout
 
-- `lib` contains the reusable `camel-discord` Camel component.
-- `example` contains a standalone Java bot that demonstrates the component.
+- `lib/` contains the reusable `io.meyer1994:camel-twitch` component.
+- `example/` contains a standalone anonymous Twitch chat listener.
 
-## Install
-
-The component requires Java 21 or newer and is built against Apache Camel 4.x.
-
-To build this project use
-
-```sh 
-$ mvn install
-```
-
-The reusable library artifact is `io.meyer1994:camel-discord`.
-
-## Run the example
-
-Build the library and example modules, then provide the Discord bot token through
-the `DISCORD_TOKEN` environment variable:
+## Build
 
 ```sh
-$ mvn -pl example -am install
-$ DISCORD_TOKEN=YOUR_DISCORD_BOT_TOKEN mvn -pl example exec:java
-```
-
-The example listens for `!ping` and replies with `Pong!`.
-
-### Gradle
-
-```groovy
-allprojects {
-    repositories {
-        ...
-        maven { url 'https://jitpack.io' }
-    }
-}
-
-dependencies {
-        implementation 'com.github.meyer1994:camel-discord:0.0.2'
-}
-```
-
-### Maven
-
-```xml
-<repositories>
-    <repository>
-        <id>jitpack.io</id>
-        <url>https://jitpack.io</url>
-    </repository>
-</repositories>
-
-<dependency>
-    <groupId>com.github.meyer1994</groupId>
-    <artifactId>camel-discord</artifactId>
-    <version>0.0.2</version>
-</dependency>
+mvn clean install
 ```
 
 ## Usage
 
-You only need to define a `@Bean`, or use the Camel's `@BindToRegistry` 
-annotation, to be autowired into the component:
+Create a Twitch4J chat client and bind it to the Camel registry:
 
 ```java
-@Bean  // Or @BindToRegistry
-public JDA jda() throws LoginException {
-    return JDABuilder.createDefault("YOUR_DISCORD_BOT_TOKEN")
-            .enableIntents(GatewayIntent.MESSAGE_CONTENT)
-            .build();
-}
+ITwitchChat client = TwitchChatBuilder.builder()
+        .withAutoJoinOwnChannel(false)
+        .build();
+
+main.bind("client", client);
 ```
 
-And now you can use the `discord` route. The example below shows a simple 
-_ping pong_ bot.
+The endpoint path is the Twitch channel login:
 
 ```java
-from("discord:messages?event=onMessageReceived")
-.filter().simple("${body.getMessage.getContentRaw} == '!ping'")
-.transform().constant("Pong!")
-.to("discord:messages?operation=sendMessage");
+from("twitch:twitch")
+    .log("${body.user.name}: ${body.message}");
 ```
 
-## Thanks
+Each exchange body is a Twitch4J `ChannelMessageEvent`. The component also
+provides channel, user, and message IDs through `x-camel-twitch-*` headers.
 
-[AWS'][2] components. It served a very useful learning resource;
-    
-[1]: https://camel.apache.org/
-[2]: https://github.com/apache/camel/tree/main/components/camel-aws
+The first version is consumer-only and supports anonymous read-only chat.
+Authentication, sending messages, Helix, and EventSub are outside its scope.
+
+## Run the example
+
+No token or environment variable is required:
+
+```sh
+mvn -pl example -am clean install
+mvn -pl example camel:run
+```
+
+The example joins the hardcoded `twitch` channel and logs incoming messages.
