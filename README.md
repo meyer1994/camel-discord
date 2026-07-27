@@ -14,7 +14,8 @@ An Apache Camel component for consuming Twitch chat messages through
 ## Project layout
 
 - `lib/` contains the reusable `io.meyer1994:camel-twitch` component.
-- `example/` contains a standalone anonymous Twitch chat listener.
+- `example/` contains a Spring Boot web example that streams Twitch chat to a
+  browser.
 
 ## Build
 
@@ -53,7 +54,10 @@ No token or environment variable is required:
 
 ```sh
 mvn -pl example -am clean install
-mvn -pl example camel:run
+mvn -pl example spring-boot:run
 ```
 
-The example joins the hardcoded `twitch` channel and logs incoming messages.
+Open `http://localhost:8080/?channel=cellbit`, replacing `cellbit` with the
+channel login you want to watch. The page opens an SSE connection to
+`/events?channel=cellbit`. Each browser connection creates a Camel
+`from("twitch:cellbit")` route, and disconnecting removes that route.

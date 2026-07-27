@@ -97,14 +97,17 @@ mvn package
 mvn install
 ```
 
-After installing the modules, run the anonymous Camel example:
+After installing the modules, run the anonymous Spring Boot example:
 
 ```sh
-mvn -pl example camel:run
+mvn -pl example spring-boot:run
 ```
 
-The example requires no Twitch credentials. It joins the hardcoded `twitch`
-channel in anonymous read-only mode and logs incoming chat messages.
+The example requires no Twitch credentials. Open
+`http://localhost:8080/?channel=cellbit` to stream that channel's messages in
+the browser. The page connects to `/events?channel=cellbit`; each SSE
+connection owns a dynamic Camel route that is removed when the connection
+closes.
 
 ## Development notes
 
