@@ -94,8 +94,8 @@ class TwitchConsumerTest extends CamelTestSupport {
     }
 
     private TwitchEndpoint endpoint(String channel, TestTwitchChat client) {
-        TwitchEndpoint endpoint = context.getEndpoint("twitch:" + channel, TwitchEndpoint.class);
-        endpoint.setClient(client);
+        TwitchEndpoint endpoint = context.getEndpoint("twitch:" + channel + "?event=CHAT", TwitchEndpoint.class);
+        endpoint.setClient(client.asClient());
         return endpoint;
     }
 

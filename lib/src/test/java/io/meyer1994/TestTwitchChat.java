@@ -3,10 +3,12 @@ package io.meyer1994;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.lang.reflect.Proxy;
 import java.util.Set;
 
 import com.github.philippheuer.events4j.core.EventManager;
 import com.github.philippheuer.events4j.simple.SimpleEventHandler;
+import com.github.twitch4j.ITwitchClient;
 import com.github.twitch4j.chat.ITwitchChat;
 import com.github.twitch4j.common.util.EventManagerUtils;
 
@@ -65,5 +67,19 @@ final class TestTwitchChat implements ITwitchChat {
 
     boolean isClosed() {
         return closed;
+    }
+
+    ITwitchClient asClient() {
+        return (ITwitchClient) Proxy.newProxyInstance(
+                ITwitchClient.class.getClassLoader(),
+                new Class<?>[] { ITwitchClient.class },
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "equals" -> proxy == args[0];
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    case "toString" -> "TestTwitchClient";
+                    case "getEventManager" -> eventManager;
+                    case "getChat" -> this;
+                    default -> throw new UnsupportedOperationException("Not used by this test: " + method.getName());
+                });
     }
 }

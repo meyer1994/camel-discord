@@ -23,7 +23,7 @@ class TwitchComponentDiscoveryTest extends CamelTestSupport {
             assertNotNull(stream);
             String metadata = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
             assertTrue(metadata.contains("\"consumerOnly\": true"));
-            assertTrue(metadata.contains("\"javaType\": \"com.github.twitch4j.chat.ITwitchChat\""));
+            assertTrue(metadata.contains("\"javaType\": \"com.github.twitch4j.ITwitchClient\""));
             assertTrue(metadata.contains("\"x-camel-twitch-message-id\""));
         }
 
