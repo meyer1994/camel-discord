@@ -109,6 +109,16 @@ public class TwitchChatRouteTemplate extends RouteBuilder {
                                 .to("sql:SELECT message FROM twitch_chat_messages WHERE channel_name = :#channel")
                                 .bean(EmojiCounter.class, "count");
 
+                from("direct:topChatters")
+                                .to("sql:" + """
+                                                SELECT user_name, COUNT(*) AS amount
+                                                FROM twitch_chat_messages
+                                                WHERE channel_name = :#channel
+                                                GROUP BY user_name
+                                                ORDER BY amount DESC, user_name
+                                                LIMIT 10
+                                                """);
+
                 from("direct:aiCategoryCounts")
                                 .to("sql:" + """
                                                 SELECT category, COUNT(*) AS amount

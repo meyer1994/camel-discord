@@ -60,6 +60,15 @@ public class ChatController {
         return Map.of("points", timeSeries("direct:chatterStats", channel));
     }
 
+    @GetMapping(path = "/api/stats/chatters/top", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Map<String, Object> topChatters(@RequestParam("channel") String channel) {
+        return Map.of("items", topChatterRows(channel).stream()
+                .map(row -> Map.of(
+                        "user", row.get("USER_NAME"),
+                        "count", ((Number) row.get("AMOUNT")).longValue()))
+                .toList());
+    }
+
     @GetMapping(path = "/api/stats/emojis", produces = MediaType.APPLICATION_JSON_VALUE)
     public Map<String, Object> emojiStats(@RequestParam("channel") String channel) {
         return Map.of("items", emojiCounts(channel).entrySet().stream()
@@ -81,6 +90,12 @@ public class ChatController {
     private List<Map<String, Object>> categoryRows(String channel) {
         return producerTemplate.requestBodyAndHeader(
                 "direct:aiCategoryCounts", null, "channel", channel, List.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> topChatterRows(String channel) {
+        return producerTemplate.requestBodyAndHeader(
+                "direct:topChatters", null, "channel", channel, List.class);
     }
 
     @SuppressWarnings("unchecked")

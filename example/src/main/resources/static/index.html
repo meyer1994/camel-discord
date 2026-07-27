@@ -43,6 +43,16 @@
         </div>
 
         <div class="card bg-base-100 shadow">
+          <div class="card-body gap-3 p-4 sm:p-6">
+            <div class="flex items-center justify-between">
+              <h2 class="card-title">Top chatters</h2>
+              <span class="badge badge-primary badge-outline">Top 10</span>
+            </div>
+            <div id="top-chatters" class="divide-y divide-base-300"></div>
+          </div>
+        </div>
+
+        <div class="card bg-base-100 shadow">
           <div class="card-body p-4 sm:p-6">
             <h2 class="card-title">Messages per minute</h2>
             <div id="messages-chart" class="h-56 w-full sm:h-72"></div>
@@ -190,6 +200,40 @@
         Math.max(0, ...points.map(point => point[1])).toLocaleString();
     }
 
+    async function refreshTopChatters() {
+      const data = await getJson("/api/stats/chatters/top");
+      const container = document.getElementById("top-chatters");
+      container.replaceChildren();
+
+      if (!data.items.length) {
+        const empty = document.createElement("p");
+        empty.className = "py-2 text-sm opacity-60";
+        empty.textContent = "No data yet";
+        container.append(empty);
+        return;
+      }
+
+      data.items.forEach((item, index) => {
+        const row = document.createElement("div");
+        row.className = "flex items-center gap-3 py-2 text-sm";
+
+        const rank = document.createElement("span");
+        rank.className = "w-5 text-center font-mono text-xs opacity-60";
+        rank.textContent = `${index + 1}`;
+
+        const user = document.createElement("span");
+        user.className = "min-w-0 flex-1 truncate font-medium";
+        user.textContent = item.user;
+
+        const count = document.createElement("span");
+        count.className = "font-mono text-xs opacity-70";
+        count.textContent = item.count.toLocaleString();
+
+        row.append(rank, user, count);
+        container.append(row);
+      });
+    }
+
     async function refreshEmojis() {
       const data = await getJson("/api/stats/emojis");
       const items = data.items;
@@ -217,6 +261,7 @@
     function refreshAll() {
       refreshMessages().catch(console.error);
       refreshChatters().catch(console.error);
+      refreshTopChatters().catch(console.error);
       refreshEmojis().catch(console.error);
       refreshCategories().catch(console.error);
     }
