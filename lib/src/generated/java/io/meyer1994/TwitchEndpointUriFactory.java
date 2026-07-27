@@ -24,10 +24,11 @@ public class TwitchEndpointUriFactory extends org.apache.camel.support.component
     private static final Set<String> ENDPOINT_IDENTITY_PROPERTY_NAMES;
     private static final Map<String, String> MULTI_VALUE_PREFIXES;
     static {
-        Set<String> props = new HashSet<>(5);
+        Set<String> props = new HashSet<>(6);
         props.add("bridgeErrorHandler");
         props.add("channel");
         props.add("client");
+        props.add("event");
         props.add("exceptionHandler");
         props.add("exchangePattern");
         PROPERTY_NAMES = Collections.unmodifiableSet(props);

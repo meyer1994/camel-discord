@@ -25,7 +25,8 @@ public class TwitchEndpointConfigurer extends PropertyConfigurerSupport implemen
         switch (ignoreCase ? name.toLowerCase() : name) {
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": target.setBridgeErrorHandler(property(camelContext, boolean.class, value)); return true;
-        case "client": target.setClient(property(camelContext, com.github.twitch4j.chat.ITwitchChat.class, value)); return true;
+        case "client": target.setClient(property(camelContext, com.github.twitch4j.ITwitchClient.class, value)); return true;
+        case "event": target.setEvent(property(camelContext, io.meyer1994.TwitchEvent.class, value)); return true;
         case "exceptionhandler":
         case "exceptionHandler": target.setExceptionHandler(property(camelContext, org.apache.camel.spi.ExceptionHandler.class, value)); return true;
         case "exchangepattern":
@@ -44,7 +45,8 @@ public class TwitchEndpointConfigurer extends PropertyConfigurerSupport implemen
         switch (ignoreCase ? name.toLowerCase() : name) {
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": return boolean.class;
-        case "client": return com.github.twitch4j.chat.ITwitchChat.class;
+        case "client": return com.github.twitch4j.ITwitchClient.class;
+        case "event": return io.meyer1994.TwitchEvent.class;
         case "exceptionhandler":
         case "exceptionHandler": return org.apache.camel.spi.ExceptionHandler.class;
         case "exchangepattern":
@@ -60,6 +62,7 @@ public class TwitchEndpointConfigurer extends PropertyConfigurerSupport implemen
         case "bridgeerrorhandler":
         case "bridgeErrorHandler": return target.isBridgeErrorHandler();
         case "client": return target.getClient();
+        case "event": return target.getEvent();
         case "exceptionhandler":
         case "exceptionHandler": return target.getExceptionHandler();
         case "exchangepattern":

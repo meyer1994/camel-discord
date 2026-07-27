@@ -16,10 +16,10 @@
   <name>Camel Twitch Component</name>
 
   <dependencies>
-    <!-- Twitch chat -->
+    <!-- Twitch chat and EventSub -->
     <dependency>
       <groupId>com.github.twitch4j</groupId>
-      <artifactId>twitch4j-chat</artifactId>
+      <artifactId>twitch4j</artifactId>
     </dependency>
 
     <!-- camel -->

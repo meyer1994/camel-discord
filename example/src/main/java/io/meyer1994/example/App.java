@@ -6,8 +6,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
 
-import com.github.twitch4j.chat.ITwitchChat;
-import com.github.twitch4j.chat.TwitchChatBuilder;
+import com.github.twitch4j.ITwitchClient;
+import com.github.twitch4j.TwitchClientBuilder;
 
 @SpringBootApplication
 public class App {
@@ -16,11 +16,12 @@ public class App {
     }
 
     @Bean(destroyMethod = "close")
-    @ConditionalOnMissingBean(ITwitchChat.class)
+    @ConditionalOnMissingBean(ITwitchClient.class)
     @Profile("!test")
-    ITwitchChat twitchChat() {
-        return TwitchChatBuilder.builder()
-                .withAutoJoinOwnChannel(false)
+    ITwitchClient twitchClient() {
+        return TwitchClientBuilder.builder()
+                .withEnableChat(true)
+                .withChatAutoJoinOwnChannel(false)
                 .build();
     }
 

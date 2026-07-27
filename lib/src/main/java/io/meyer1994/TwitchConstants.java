@@ -19,4 +19,10 @@ public interface TwitchConstants {
 
     @Metadata(description = "The Twitch chat message ID.", javaType = "String")
     String HEADER_MESSAGE_ID = "x-camel-twitch-message-id";
+
+    @Metadata(description = "The Twitch EventSub event type.", javaType = "String")
+    String HEADER_EVENT_TYPE = "x-camel-twitch-event-type";
+
+    @Metadata(description = "The Twitch event timestamp.", javaType = "java.time.Instant")
+    String HEADER_EVENT_TIMESTAMP = "x-camel-twitch-event-timestamp";
 }

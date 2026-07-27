@@ -40,10 +40,10 @@ public class TwitchStreamService {
     }
 
     public Flux<ServerSentEvent<String>> stream(String channel) throws Exception {
-        Endpoint endpoint = context.hasEndpoint(String.format("twitch:%s", channel));
+        Endpoint endpoint = context.hasEndpoint(String.format("twitch:%s?event=CHAT", channel));
         if (endpoint == null) {
             context.addRouteFromTemplate(
-                    String.format("twitch:%s", channel),
+                    String.format("twitch:%s?event=CHAT", channel),
                     TwitchChatRouteTemplate.TEMPLATE_NAME,
                     Map.of("channel", channel));
         }

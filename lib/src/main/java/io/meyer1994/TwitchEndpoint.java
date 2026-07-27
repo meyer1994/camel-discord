@@ -12,21 +12,30 @@ import org.apache.camel.spi.UriParam;
 import org.apache.camel.spi.UriPath;
 import org.apache.camel.support.DefaultEndpoint;
 
-import com.github.twitch4j.chat.ITwitchChat;
+import com.github.twitch4j.ITwitchClient;
+import com.github.twitch4j.eventsub.EventSubSubscription;
+import com.github.twitch4j.eventsub.events.ChannelCheerEvent;
+import com.github.twitch4j.eventsub.events.ChannelSubscribeEvent;
+import com.github.twitch4j.eventsub.events.ChannelUpdateV2Event;
+import com.github.twitch4j.eventsub.events.StreamOfflineEvent;
+import com.github.twitch4j.eventsub.events.StreamOnlineEvent;
+import com.github.twitch4j.eventsub.subscriptions.SubscriptionTypes;
 
-/**
- * Receive chat messages from a Twitch channel.
- */
+/** Receive chat or EventSub events from a Twitch channel. */
 @UriEndpoint(firstVersion = "0.0.2", scheme = "twitch", title = "Twitch", syntax = "twitch:channel", category = Category.SOCIAL, consumerOnly = true, headersClass = TwitchConstants.class)
 public class TwitchEndpoint extends DefaultEndpoint {
 
     @UriParam
     @Metadata(autowired = true)
-    private ITwitchChat client;
+    private ITwitchClient client;
 
     @UriPath(description = "Twitch channel login")
     @Metadata(required = true)
     private String channel;
+
+    @UriParam(description = "Event to consume: CHAT, STREAM_ONLINE, STREAM_OFFLINE, CHANNEL_UPDATE, SUBSCRIBE, or CHEER")
+    @Metadata(required = true)
+    private TwitchEvent event;
 
     public TwitchEndpoint() {
     }
@@ -55,14 +64,49 @@ public class TwitchEndpoint extends DefaultEndpoint {
         this.channel = channel.trim().toLowerCase(Locale.ROOT);
     }
 
-    public ITwitchChat getClient() {
+    public ITwitchClient getClient() {
         return client;
     }
 
     /**
-     * The externally managed Twitch4J chat client.
+     * The externally managed Twitch4J client.
      */
-    public void setClient(ITwitchChat client) {
+    public void setClient(ITwitchClient client) {
         this.client = client;
+    }
+
+    public TwitchEvent getEvent() {
+        return event;
+    }
+
+    public void setEvent(TwitchEvent event) {
+        this.event = event;
+    }
+
+    public Class<?> getEventClass() {
+        return switch (event) {
+            case STREAM_ONLINE -> StreamOnlineEvent.class;
+            case STREAM_OFFLINE -> StreamOfflineEvent.class;
+            case CHANNEL_UPDATE -> ChannelUpdateV2Event.class;
+            case SUBSCRIBE -> ChannelSubscribeEvent.class;
+            case CHEER -> ChannelCheerEvent.class;
+            default -> throw new IllegalArgumentException("Unsupported Twitch event: " + event);
+        };
+    }
+
+    public EventSubSubscription createEventSubSubscription(String broadcasterUserId) {
+        return switch (event) {
+            case STREAM_ONLINE -> SubscriptionTypes.STREAM_ONLINE.prepareSubscription(
+                    condition -> condition.broadcasterUserId(broadcasterUserId).build(), null);
+            case STREAM_OFFLINE -> SubscriptionTypes.STREAM_OFFLINE.prepareSubscription(
+                    condition -> condition.broadcasterUserId(broadcasterUserId).build(), null);
+            case CHANNEL_UPDATE -> SubscriptionTypes.CHANNEL_UPDATE_V2.prepareSubscription(
+                    condition -> condition.broadcasterUserId(broadcasterUserId).build(), null);
+            case SUBSCRIBE -> SubscriptionTypes.CHANNEL_SUBSCRIBE.prepareSubscription(
+                    condition -> condition.broadcasterUserId(broadcasterUserId).build(), null);
+            case CHEER -> SubscriptionTypes.CHANNEL_CHEER.prepareSubscription(
+                    condition -> condition.broadcasterUserId(broadcasterUserId).build(), null);
+            default -> throw new IllegalArgumentException("Unsupported Twitch event: " + event);
+        };
     }
 }
