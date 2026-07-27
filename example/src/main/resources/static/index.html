@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Twitch Chat</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.7"></script>
+  <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <main class="mx-auto max-w-3xl px-4 py-10">
+    <header class="mb-8">
+      <p class="text-sm font-semibold uppercase tracking-widest text-violet-400">Live stream</p>
+      <h1 class="mt-2 text-4xl font-bold">Twitch Chat</h1>
+      <p class="mt-2 text-slate-400">Showing #__CHANNEL__</p>
+    </header>
+
+    <section class="overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-xl">
+      <div class="border-b border-slate-800 px-5 py-3 text-sm font-semibold text-slate-300">
+        Messages
+      </div>
+      <ul id="messages"
+          class="divide-y divide-slate-800"
+          hx-ext="sse"
+          sse-connect="/events?channel=__CHANNEL__"
+          sse-swap="chat"
+          hx-swap="beforeend"></ul>
+    </section>
+  </main>
+</body>
+</html>

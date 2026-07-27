@@ -22,42 +22,37 @@
       <version>${project.version}</version>
     </dependency>
 
-    <!-- Camel Core -->
+    <!-- Camel Spring Boot -->
     <dependency>
-      <groupId>org.apache.camel</groupId>
-      <artifactId>camel-core</artifactId>
+      <groupId>org.apache.camel.springboot</groupId>
+      <artifactId>camel-spring-boot-starter</artifactId>
     </dependency>
 
-    <!-- Camel Main -->
+    <!-- Spring WebFlux -->
     <dependency>
-      <groupId>org.apache.camel</groupId>
-      <artifactId>camel-main</artifactId>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webflux</artifactId>
     </dependency>
 
-    <!-- Twitch Chat -->
+    <!-- Tests -->
     <dependency>
-      <groupId>com.github.twitch4j</groupId>
-      <artifactId>twitch4j-chat</artifactId>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
     </dependency>
-
-    <!-- Logging -->
     <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-slf4j2-impl</artifactId>
-      <version>2.22.1</version>
+      <groupId>io.projectreactor</groupId>
+      <artifactId>reactor-test</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
   <build>
     <plugins>
       <plugin>
-        <groupId>org.apache.camel</groupId>
-        <artifactId>camel-maven-plugin</artifactId>
-        <version>${camel.version}</version>
-        <configuration>
-          <mainClass>io.meyer1994.example.App</mainClass>
-          <addResourcesToClasspath>true</addResourcesToClasspath>
-        </configuration>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <version>${spring-boot.version}</version>
       </plugin>
     </plugins>
   </build>
