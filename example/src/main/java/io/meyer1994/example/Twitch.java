@@ -5,7 +5,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Locale;
 
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
@@ -21,7 +20,7 @@ public class Twitch {
     private static final String MESSAGE_TEMPLATE = """
             <div class="chat chat-start py-0.5" title="%s">
               <div class="chat-header gap-1 text-xs leading-tight">
-                <a class="font-semibold hover:text-primary" href="/chatters?chatter=%s">%s</a>
+                <a class="font-semibold hover:text-primary" href="/chatter?chatter=%s">%s</a>
                 <time class="opacity-50" title="%s">%s</time>
               </div>
               <div class="chat-bubble min-h-0 px-3 py-1.5 text-sm leading-tight">%s</div>
@@ -45,16 +44,16 @@ public class Twitch {
     private Topics<ServerSentEvent<String>> chatterTopics = new Topics<>();
 
     public Flux<ServerSentEvent<String>> stream(String channel) {
-        return withHeartbeat(topics.subscribe(normalize(channel)));
+        return withHeartbeat(topics.subscribe(channel));
     }
 
     public Flux<ServerSentEvent<String>> streamChatter(String chatter) {
-        return withHeartbeat(chatterTopics.subscribe(normalize(chatter)));
+        return withHeartbeat(chatterTopics.subscribe(chatter));
     }
 
     public void publish(ChannelMessageEvent event) {
-        String channel = normalize(event.getChannel().getName());
-        String chatter = normalize(event.getUser().getName());
+        String channel = event.getChannel().getName();
+        String chatter = event.getUser().getName();
         String chatterUrl = URLEncoder.encode(event.getUser().getName(), StandardCharsets.UTF_8);
 
         String html = MESSAGE_TEMPLATE.formatted(
@@ -82,10 +81,6 @@ public class Twitch {
 
         topics.publish(channel, builder.build());
         chatterTopics.publish(chatter, chatterBuilder.build());
-    }
-
-    private static String normalize(String value) {
-        return value == null ? "" : value.toLowerCase(Locale.ROOT).trim();
     }
 
     private static Flux<ServerSentEvent<String>> withHeartbeat(Flux<ServerSentEvent<String>> events) {
