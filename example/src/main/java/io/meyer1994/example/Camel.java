@@ -71,7 +71,7 @@ public class Camel extends RouteBuilder {
             sql:
               SELECT COALESCE(user_name, 'anonymous') AS username, COUNT(*) AS total
               FROM twitch_event_chat
-              WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
+              WHERE channel_name = :#${body}
               GROUP BY user_name
               ORDER BY total DESC
               LIMIT 10
@@ -84,7 +84,7 @@ public class Camel extends RouteBuilder {
                 CAST(EXTRACT(EPOCH FROM DATE_TRUNC('second', event_time)) * 1000 AS BIGINT) AS time,
                 COUNT(*) AS value
               FROM twitch_event_chat
-              WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
+              WHERE channel_name = :#${body}
                 AND event_time >= NOW() - INTERVAL '5 minutes'
               GROUP BY time
               ORDER BY time
@@ -97,7 +97,7 @@ public class Camel extends RouteBuilder {
                 CAST(EXTRACT(EPOCH FROM DATE_TRUNC('minute', event_time)) * 1000 AS BIGINT) AS time,
                 COUNT(*) AS value
               FROM twitch_event_chat
-              WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
+              WHERE channel_name = :#${body}
                 AND event_time >= NOW() - INTERVAL '1 hour'
               GROUP BY time
               ORDER BY time
@@ -108,7 +108,7 @@ public class Camel extends RouteBuilder {
             sql:
               SELECT COUNT(*) AS total
               FROM twitch_event_chat
-              WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
+              WHERE channel_name = :#${body}
             """);
 
     from("direct:twitch-chat-velocity-5min")
@@ -119,7 +119,7 @@ public class Camel extends RouteBuilder {
                   DATE_TRUNC('second', event_time) AS second,
                   COUNT(*) AS messages
                 FROM twitch_event_chat
-                WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
+                WHERE channel_name = :#${body}
                   AND event_time >= NOW() - INTERVAL '5 minutes'
                 GROUP BY second
               )
@@ -143,7 +143,7 @@ public class Camel extends RouteBuilder {
                 CAST(EXTRACT(EPOCH FROM DATE_TRUNC('second', event_time)) * 1000 AS BIGINT) AS time,
                 COUNT(DISTINCT user_id) AS value
               FROM twitch_event_chat
-              WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
+              WHERE channel_name = :#${body}
                 AND event_time >= NOW() - INTERVAL '5 minutes'
               GROUP BY time
               ORDER BY time
@@ -162,7 +162,7 @@ public class Camel extends RouteBuilder {
                 END AS bucket,
                 COUNT(*) AS count
               FROM twitch_event_chat
-              WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
+              WHERE channel_name = :#${body}
               GROUP BY bucket
               ORDER BY MIN(LENGTH(message))
             """);
@@ -177,7 +177,7 @@ public class Camel extends RouteBuilder {
                 MAX(subscriber_months) AS subscriber_months,
                 MODE() WITHIN GROUP (ORDER BY subscription_tier) AS tier
               FROM twitch_event_chat
-              WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
+              WHERE channel_name = :#${body}
               GROUP BY user_name
               ORDER BY message_count DESC
               LIMIT 100
@@ -190,7 +190,7 @@ public class Camel extends RouteBuilder {
                 subscription_tier AS tier,
                 COUNT(*) AS count
               FROM twitch_event_chat
-              WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
+              WHERE channel_name = :#${body}
               GROUP BY subscription_tier
               ORDER BY subscription_tier
             """);
@@ -202,7 +202,7 @@ public class Camel extends RouteBuilder {
                 EXTRACT(HOUR FROM event_time)::INTEGER AS hour,
                 COUNT(*) AS count
               FROM twitch_event_chat
-              WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
+              WHERE channel_name = :#${body}
               GROUP BY hour
               ORDER BY hour
             """);
@@ -216,7 +216,7 @@ public class Camel extends RouteBuilder {
                 MAX(subscriber_months) AS subscriber_months,
                 MODE() WITHIN GROUP (ORDER BY subscription_tier) AS tier
               FROM twitch_event_chat
-              WHERE LOWER(TRIM(user_name)) = LOWER(TRIM(:#${body}))
+              WHERE user_name = :#${body}
             """);
 
     from("direct:twitch-chatter-by-channel")
@@ -227,7 +227,7 @@ public class Camel extends RouteBuilder {
                 COUNT(*) AS messages,
                 ROUND(AVG(LENGTH(message))::numeric, 2) AS average_message_length
               FROM twitch_event_chat
-              WHERE LOWER(TRIM(user_name)) = LOWER(TRIM(:#${body}))
+              WHERE user_name = :#${body}
               GROUP BY channel_name
               ORDER BY messages DESC
             """);
@@ -239,7 +239,7 @@ public class Camel extends RouteBuilder {
                 CAST(EXTRACT(EPOCH FROM DATE_TRUNC('minute', event_time)) * 1000 AS BIGINT) AS time,
                 COUNT(*) AS value
               FROM twitch_event_chat
-              WHERE LOWER(TRIM(user_name)) = LOWER(TRIM(:#${body}))
+              WHERE user_name = :#${body}
                 AND event_time >= NOW() - INTERVAL '5 minutes'
               GROUP BY time
               ORDER BY time
@@ -258,7 +258,7 @@ public class Camel extends RouteBuilder {
                 END AS bucket,
                 COUNT(*) AS count
               FROM twitch_event_chat
-              WHERE LOWER(TRIM(user_name)) = LOWER(TRIM(:#${body}))
+              WHERE user_name = :#${body}
               GROUP BY bucket
               ORDER BY MIN(LENGTH(message))
             """);
@@ -268,7 +268,7 @@ public class Camel extends RouteBuilder {
             sql:
               SELECT subscription_tier AS tier, COUNT(*) AS count
               FROM twitch_event_chat
-              WHERE LOWER(TRIM(user_name)) = LOWER(TRIM(:#${body}))
+              WHERE user_name = :#${body}
               GROUP BY subscription_tier
               ORDER BY subscription_tier
             """);
@@ -280,7 +280,7 @@ public class Camel extends RouteBuilder {
                 EXTRACT(HOUR FROM event_time)::INTEGER AS hour,
                 COUNT(*) AS count
               FROM twitch_event_chat
-              WHERE LOWER(TRIM(user_name)) = LOWER(TRIM(:#${body}))
+              WHERE user_name = :#${body}
               GROUP BY hour
               ORDER BY hour
             """);

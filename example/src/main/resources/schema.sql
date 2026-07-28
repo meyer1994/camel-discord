@@ -16,7 +16,28 @@ CREATE TABLE IF NOT EXISTS twitch_event_chat (
 );
 
 CREATE INDEX IF NOT EXISTS idx_twitch_event_chat_channel_time
-    ON twitch_event_chat (LOWER(channel_name), event_time);
+    ON twitch_event_chat (channel_name, event_time);
 
 CREATE INDEX IF NOT EXISTS idx_twitch_event_chat_channel_user
-    ON twitch_event_chat (LOWER(channel_name), user_name);
+    ON twitch_event_chat (channel_name, user_name, event_time);
+
+CREATE INDEX IF NOT EXISTS idx_twitch_event_chat_user_time
+    ON twitch_event_chat (user_name, event_time);
+
+CREATE INDEX IF NOT EXISTS idx_twitch_event_chat_user_channel
+    ON twitch_event_chat (user_name, channel_name, event_time);
+
+CREATE INDEX IF NOT EXISTS idx_twitch_event_chat_event_time
+    ON twitch_event_chat (event_time);
+
+CREATE INDEX IF NOT EXISTS idx_twitch_event_chat_created_at
+    ON twitch_event_chat (created_at, event_time);
+
+CREATE INDEX IF NOT EXISTS idx_twitch_event_chat_subscriber_months
+    ON twitch_event_chat (subscriber_months, event_time);
+
+CREATE INDEX IF NOT EXISTS idx_twitch_event_chat_subscription_tier
+    ON twitch_event_chat (subscription_tier, event_time);
+
+CREATE INDEX IF NOT EXISTS idx_twitch_event_chat_display_name
+    ON twitch_event_chat (display_name, event_time);
