@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en" data-theme="dark" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="|Chatter - ${chatter}|">Chatter</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css">
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.7"></script>
+  <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
+</head>
+<body class="min-h-screen overflow-x-hidden bg-base-300 text-base-content">
+  <div class="navbar min-h-14 border-b border-base-300 bg-base-100 px-3 shadow-sm sm:px-4 lg:px-8">
+    <div class="flex-1"><span class="text-lg font-bold sm:text-xl">Chatter Observatory</span></div>
+    <div class="flex-none"><span class="badge badge-primary badge-outline" th:text="${chatter}">chatter</span></div>
+  </div>
+
+  <main class="mx-auto max-w-[1600px] p-3 sm:p-4 lg:p-6">
+    <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-6">
+      <section class="grid min-w-0 gap-4 sm:grid-cols-2">
+        <div class="card min-w-0 bg-base-100 shadow sm:col-span-2">
+          <div class="card-body p-4">
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div><div class="stat-title">Messages</div><div id="total-messages" class="stat-value text-primary">0</div></div>
+              <div><div class="stat-title">Avg. length</div><div id="average-length" class="stat-value text-secondary">0</div></div>
+              <div><div class="stat-title">Subscriber months</div><div id="subscriber-months" class="stat-value">0</div></div>
+              <div><div class="stat-title">Channels</div><div id="channel-count" class="stat-value text-accent">0</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card min-w-0 bg-base-100 shadow sm:col-span-2"><div class="card-body p-4"><h2 class="card-title text-base">Messages over time</h2><p class="text-xs opacity-60">All configured channels</p><div id="timeline-chart" class="h-64 w-full"></div></div></div>
+        <div class="card min-w-0 bg-base-100 shadow"><div class="card-body p-4"><h2 class="card-title text-base">Messages by channel</h2><div id="channels-chart" class="h-64 w-full"></div></div></div>
+        <div class="card min-w-0 bg-base-100 shadow"><div class="card-body p-4"><h2 class="card-title text-base">Message length</h2><div id="lengths-chart" class="h-64 w-full"></div></div></div>
+        <div class="card min-w-0 bg-base-100 shadow"><div class="card-body p-4"><h2 class="card-title text-base">Subscription tiers</h2><div id="tiers-chart" class="h-64 w-full"></div></div></div>
+      </section>
+
+      <aside class="card h-[28rem] min-h-0 bg-base-100 shadow sm:h-[32rem] lg:sticky lg:top-6 lg:h-[calc(100vh-5.5rem)] lg:min-h-[32rem]">
+        <div class="card-body min-h-0 gap-0 p-0">
+          <div class="flex items-center justify-between border-b border-base-300 px-4 py-3 sm:px-5 sm:py-4"><h2 class="card-title text-lg">Live messages</h2><span class="badge badge-success badge-sm">LIVE</span></div>
+          <div class="min-h-0 flex-1" hx-ext="sse" th:attr="sse-connect=@{/events/chatter(chatter=${chatter})}">
+            <div id="messages" class="h-full space-y-0 overflow-y-auto break-words p-1.5 sm:p-2" sse-swap="chat"
+              hx-swap="beforeend"></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <script th:inline="javascript">
+    const chatter = /*[[${chatter}]]*/ "chatter";
+    const charts = [];
+
+    function initChart(id, option) {
+      const chart = echarts.init(document.getElementById(id));
+      chart.setOption({ animation: false, textStyle: { color: "#a6adbb" }, ...option });
+      charts.push(chart);
+      return chart;
+    }
+
+    const timelineChart = initChart("timeline-chart", {
+      grid: { top: 18, right: 16, bottom: 34, left: 44 }, tooltip: { trigger: "axis" },
+      xAxis: { type: "time", axisLabel: { hideOverlap: true, formatter: value => new Date(value).toLocaleDateString([], { month: "short", day: "numeric" }) } },
+      yAxis: { type: "value", minInterval: 1 }, series: [{ type: "line", smooth: true, showSymbol: false, itemStyle: { color: "#570df8" }, areaStyle: { opacity: 0.15 }, data: [] }]
+    });
+    const channelsChart = initChart("channels-chart", { grid: { top: 16, right: 16, bottom: 24, left: 72 }, xAxis: { type: "value", minInterval: 1 }, yAxis: { type: "category", data: [] }, series: [{ type: "bar", itemStyle: { color: "#37cdbe" }, data: [] }] });
+    const lengthsChart = initChart("lengths-chart", { grid: { top: 16, right: 16, bottom: 24, left: 44 }, xAxis: { type: "category", data: [] }, yAxis: { type: "value", minInterval: 1 }, series: [{ type: "bar", itemStyle: { color: "#fbbd23" }, data: [] }] });
+    const tiersChart = initChart("tiers-chart", { tooltip: { trigger: "item" }, legend: { bottom: 0 }, series: [{ type: "pie", radius: ["35%", "68%"], data: [] }] });
+
+    async function fetchStats(path) {
+      const response = await fetch(`${path}?chatter=${encodeURIComponent(chatter)}`);
+      if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+      return response.json();
+    }
+
+    async function refreshSummary() {
+      const [summary, channels] = await Promise.all([fetchStats("/api/chatters/summary"), fetchStats("/api/chatters/channels")]);
+      document.getElementById("total-messages").textContent = Number(summary.messages || 0).toLocaleString();
+      document.getElementById("average-length").textContent = Number(summary.averageMessageLength || 0).toFixed(1);
+      document.getElementById("subscriber-months").textContent = Number(summary.subscriberMonths || 0).toLocaleString();
+      document.getElementById("channel-count").textContent = channels.items.length.toLocaleString();
+      const items = channels.items;
+      channelsChart.setOption({ yAxis: { data: items.map(item => item.channel).reverse() }, series: [{ data: items.map(item => item.messages).reverse() }] });
+    }
+
+    async function refreshTimeline() {
+      const data = await fetchStats("/api/chatters/timeline");
+      timelineChart.setOption({ series: [{ data: data.points.map(point => [point.time, point.value]) }] });
+    }
+
+    async function refreshLengths() {
+      const data = await fetchStats("/api/chatters/lengths");
+      lengthsChart.setOption({ xAxis: { data: data.items.map(item => item.bucket) }, series: [{ data: data.items.map(item => item.count) }] });
+    }
+
+    async function refreshTiers() {
+      const data = await fetchStats("/api/chatters/tiers");
+      tiersChart.setOption({ series: [{ data: data.items.map(item => ({ name: `Tier ${item.tier}`, value: item.count })) }] });
+    }
+
+    function refreshAll() {
+      refreshSummary().catch(console.error); refreshTimeline().catch(console.error); refreshLengths().catch(console.error); refreshTiers().catch(console.error);
+    }
+
+    refreshAll();
+    setInterval(refreshAll, 5000);
+    window.addEventListener("resize", () => charts.forEach(chart => chart.resize()));
+    document.body.addEventListener("htmx:afterSettle", event => { const target = event.detail?.target || event.target; if (target?.id === "messages") requestAnimationFrame(() => target.scrollTop = target.scrollHeight); });
+  </script>
+</body>
+</html>

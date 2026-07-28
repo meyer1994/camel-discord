@@ -40,6 +40,13 @@
               <p class="mb-1 text-xs font-semibold uppercase opacity-60">Messages per minute</p>
               <div class="messages-chart h-32 w-full"></div>
             </div>
+            <div class="border-t border-base-300 pt-3">
+              <div class="mb-1 flex items-center justify-between">
+                <p class="text-xs font-semibold uppercase opacity-60">Top chatters</p>
+                <span class="text-xs opacity-50">Top 10</span>
+              </div>
+              <div data-leaderboard class="divide-y divide-base-300"></div>
+            </div>
           </div>
         </div>
       </a>
@@ -102,14 +109,46 @@
       element.textContent = Number(data.total).toLocaleString();
     }
 
+    async function refreshLeaderboard(channel, element) {
+      const response = await fetch(`/api/stats/chatters/top?channel=${encodeURIComponent(channel)}`);
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      element.replaceChildren();
+      data.items.forEach((item, index) => {
+        const row = document.createElement("div");
+        row.className = "flex items-center gap-2 py-1 text-xs";
+
+        const rank = document.createElement("span");
+        rank.className = "w-4 text-center font-mono opacity-50";
+        rank.textContent = index + 1;
+
+        const user = document.createElement("a");
+        user.className = "min-w-0 flex-1 truncate font-medium hover:text-primary";
+        user.href = `/chatter?chatter=${encodeURIComponent(item.user)}`;
+        user.textContent = item.user;
+
+        const count = document.createElement("span");
+        count.className = "font-mono opacity-60";
+        count.textContent = Number(item.count).toLocaleString();
+
+        row.append(rank, user, count);
+        element.append(row);
+      });
+    }
+
     document.querySelectorAll("[data-channel]").forEach(card => {
       const channel = card.dataset.channel;
       const messagesChart = createChart(card.querySelector(".messages-chart"), "#570df8");
       const totalMessages = card.querySelector("[data-total-messages]");
+      const leaderboard = card.querySelector("[data-leaderboard]");
 
       function refresh() {
         refreshChart("/api/stats/messages", channel, messagesChart).catch(console.error);
         refreshTotalMessages(channel, totalMessages).catch(console.error);
+        refreshLeaderboard(channel, leaderboard).catch(console.error);
       }
 
       refresh();

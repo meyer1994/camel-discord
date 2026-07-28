@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en" data-theme="dark" xmlns:th="http://www.thymeleaf.org">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,6 +12,7 @@
   <script src="https://unpkg.com/htmx.org@2.0.7"></script>
   <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
 </head>
+
 <body class="min-h-screen overflow-x-hidden bg-base-300 text-base-content">
   <div class="navbar min-h-14 border-b border-base-300 bg-base-100 px-3 shadow-sm sm:px-4 lg:px-8">
     <div class="flex-1"><span class="text-lg font-bold sm:text-xl">Chat Observatory</span></div>
@@ -20,20 +22,76 @@
   <main class="mx-auto max-w-[1600px] p-3 sm:p-4 lg:p-6">
     <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-6">
       <section class="grid min-w-0 gap-4 sm:grid-cols-2">
-        <div class="card min-w-0 bg-base-100 shadow"><div class="card-body p-4"><h2 class="card-title text-base">Messages per minute</h2><p class="text-xs opacity-60">Last five minutes</p><div id="messages-chart" class="h-64 w-full"></div></div></div>
-        <div class="card min-w-0 bg-base-100 shadow"><div class="card-body p-4"><h2 class="card-title text-base">Chat velocity</h2><p class="text-xs opacity-60">10-second rolling average</p><div id="velocity-chart" class="h-64 w-full"></div></div></div>
-        <div class="card min-w-0 bg-base-100 shadow"><div class="card-body p-4"><h2 class="card-title text-base">Unique chatters per minute</h2><p class="text-xs opacity-60">Distinct users over time</p><div id="chatters-chart" class="h-64 w-full"></div></div></div>
-        <div class="card min-w-0 bg-base-100 shadow"><div class="card-body p-4"><h2 class="card-title text-base">Message length</h2><p class="text-xs opacity-60">Distribution of recent messages</p><div id="lengths-chart" class="h-64 w-full"></div></div></div>
-        <div class="card min-w-0 bg-base-100 shadow"><div class="card-body p-4"><h2 class="card-title text-base">Subscriber tiers</h2><p class="text-xs opacity-60">Messages by subscription tier</p><div id="tiers-chart" class="h-64 w-full"></div></div></div>
-        <div class="card min-w-0 bg-base-100 shadow"><div class="card-body p-4"><h2 class="card-title text-base">Activity by hour</h2><p class="text-xs opacity-60">Message volume by hour</p><div id="hour-chart" class="h-64 w-full"></div></div></div>
-        <div class="card min-w-0 bg-base-100 shadow"><div class="card-body p-4"><h2 class="card-title text-base">Chatter constellation</h2><p class="text-xs opacity-60">The most connected voices in chat</p><div id="constellation-chart" class="h-64 w-full"></div></div></div>
-        <div class="card min-w-0 bg-base-100 shadow"><div class="card-body p-4"><div class="flex items-center justify-between"><h2 class="card-title text-base">Chat leaderboard</h2><span class="badge badge-primary badge-outline">Top 10</span></div><div id="leaderboard" class="divide-y divide-base-300"></div></div></div>
+        <div class="card min-w-0 bg-base-100 shadow">
+          <div class="card-body p-4">
+            <h2 class="card-title text-base">Messages per minute</h2>
+            <p class="text-xs opacity-60">Last five minutes</p>
+            <div id="messages-chart" class="h-64 w-full"></div>
+          </div>
+        </div>
+        <div class="card min-w-0 bg-base-100 shadow">
+          <div class="card-body p-4">
+            <h2 class="card-title text-base">Chat velocity</h2>
+            <p class="text-xs opacity-60">10-second rolling average</p>
+            <div id="velocity-chart" class="h-64 w-full"></div>
+          </div>
+        </div>
+        <div class="card min-w-0 bg-base-100 shadow">
+          <div class="card-body p-4">
+            <h2 class="card-title text-base">Unique chatters per minute</h2>
+            <p class="text-xs opacity-60">Distinct users over time</p>
+            <div id="chatters-chart" class="h-64 w-full"></div>
+          </div>
+        </div>
+        <div class="card min-w-0 bg-base-100 shadow">
+          <div class="card-body p-4">
+            <h2 class="card-title text-base">Message length</h2>
+            <p class="text-xs opacity-60">Distribution of recent messages</p>
+            <div id="lengths-chart" class="h-64 w-full"></div>
+          </div>
+        </div>
+        <div class="card min-w-0 bg-base-100 shadow">
+          <div class="card-body p-4">
+            <h2 class="card-title text-base">Subscriber tiers</h2>
+            <p class="text-xs opacity-60">Messages by subscription tier</p>
+            <div id="tiers-chart" class="h-64 w-full"></div>
+          </div>
+        </div>
+        <div class="card min-w-0 bg-base-100 shadow">
+          <div class="card-body p-4">
+            <h2 class="card-title text-base">Activity by hour</h2>
+            <p class="text-xs opacity-60">Message volume by hour</p>
+            <div id="hour-chart" class="h-64 w-full"></div>
+          </div>
+        </div>
+        <div class="card min-w-0 bg-base-100 shadow">
+          <div class="card-body p-4">
+            <h2 class="card-title text-base">Chatter constellation</h2>
+            <p class="text-xs opacity-60">The most connected voices in chat</p>
+            <div id="constellation-chart" class="h-64 w-full"></div>
+          </div>
+        </div>
+        <div class="card min-w-0 bg-base-100 shadow">
+          <div class="card-body p-4">
+            <div class="flex items-center justify-between">
+              <h2 class="card-title text-base">Chat leaderboard</h2><span class="badge badge-primary badge-outline">Top
+                10</span>
+            </div>
+            <div id="leaderboard" class="divide-y divide-base-300"></div>
+          </div>
+        </div>
       </section>
 
-      <aside class="card h-[28rem] min-h-0 bg-base-100 shadow sm:h-[32rem] lg:sticky lg:top-6 lg:h-[calc(100vh-5.5rem)] lg:min-h-[32rem]">
+      <aside
+        class="card h-[28rem] min-h-0 bg-base-100 shadow sm:h-[32rem] lg:sticky lg:top-6 lg:h-[calc(100vh-5.5rem)] lg:min-h-[32rem]">
         <div class="card-body min-h-0 gap-0 p-0">
-          <div class="flex items-center justify-between border-b border-base-300 px-4 py-3 sm:px-5 sm:py-4"><h2 class="card-title text-lg">Live chat</h2><span class="badge badge-success badge-sm">LIVE</span></div>
-          <div id="messages" class="min-h-0 flex-1 space-y-0 overflow-y-auto break-words p-1.5 sm:p-2" hx-ext="sse" th:attr="sse-connect=@{/events(channel=${channel})}" sse-swap="chat" hx-swap="beforeend"></div>
+          <div class="flex items-center justify-between border-b border-base-300 px-4 py-3 sm:px-5 sm:py-4">
+            <h2 class="card-title text-lg">Live chat</h2><span class="badge badge-success badge-sm">LIVE</span>
+          </div>
+          <div class="min-h-0 flex-1" hx-ext="sse" th:attr="sse-connect=@{/events(channel=${channel})}">
+            <div id="messages" class="h-full space-y-0 overflow-y-auto break-words p-1.5 sm:p-2" sse-swap="chat"
+              hx-swap="beforeend"></div>
+          </div>
         </div>
       </aside>
     </div>
@@ -69,7 +127,12 @@
 
     async function refreshLengthsChart() {
       const data = await fetchStats("/api/stats/messages/length");
-      chartLengths.setOption({ xAxis: { type: "category", data: (data.items || data).map(item => item.label ?? item.length ?? item.bucket) }, series: [{ type: "bar", itemStyle: { color: "#fbbd23" }, data: (data.items || data).map(item => item.value ?? item.count ?? 0) }] });
+      chartLengths.setOption({ 
+        xAxis: { type: "category", data: (data.items || data).map(item => item.label ?? item.length ?? item.bucket) }, 
+        series: [{ type: "bar", itemStyle: { color: "#fbbd23" }, 
+        data: (data.items || data).map(item => item.value ?? item.count ?? 0) 
+        }] 
+      });
     }
 
     async function refreshTiersChart() {
@@ -124,7 +187,7 @@
     refreshAll();
     setInterval(refreshAll, 5000);
     window.addEventListener("resize", () => { chartMessages.resize(); chartVelocity.resize(); chartChatters.resize(); chartLengths.resize(); chartTiers.resize(); chartHour.resize(); chartConstellation.resize(); });
-    document.body.addEventListener("htmx:afterSettle", event => { const target = event.detail?.target || event.target; if (target?.id === "messages") requestAnimationFrame(() => target.scrollTop = target.scrollHeight); });
   </script>
 </body>
+
 </html>
