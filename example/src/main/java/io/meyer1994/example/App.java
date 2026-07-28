@@ -2,10 +2,8 @@ package io.meyer1994.example;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 import org.springframework.web.reactive.config.CorsRegistry;
 import org.springframework.web.reactive.config.WebFluxConfigurer;
 
@@ -20,12 +18,10 @@ public class App {
     }
 
     @Bean(destroyMethod = "close")
-    @ConditionalOnMissingBean(ITwitchClient.class)
-    @Profile("!test")
     ITwitchClient twitchClient() {
         return TwitchClientBuilder.builder()
                 .withEnableChat(true)
-                .withEnableHelix(true)
+                // .withEnableHelix(true)
                 .withChatAutoJoinOwnChannel(false)
                 .build();
     }

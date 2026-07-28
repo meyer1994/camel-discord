@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
-public class TwitchChatRouteTemplate extends RouteBuilder {
+public class Camel extends RouteBuilder {
   static final String TEMPLATE_NAME = "twitch-chat-listener";
 
   @Value("${app.twitch.channels}")
@@ -19,13 +19,18 @@ public class TwitchChatRouteTemplate extends RouteBuilder {
         .templateParameter("channel")
         .from("twitch:{{channel}}?event=CHAT")
         .log("Twitch chat event: ${header['x-camel-twitch-message-id']}")
-        .bean(TwitchStreamService.class, "publish");
+        .bean(Twitch.class, "publish");
 
     for (String channel : channels) {
       from("twitch:%s?event=CHAT".formatted(channel))
-          .log("Inserting message into database: ${body.messageEvent.messageId}")
-          .to("""
-              sql:INSERT INTO twitch_event_chat (
+          .wireTap("seda:twitch-chat-insert")
+          .wireTap("seda:twitch-chat-listener");
+    }
+
+    from("seda:twitch-chat-insert?concurrentConsumers=4")
+        .to("""
+            sql:
+              INSERT INTO twitch_event_chat (
                 message_id,
                 event_time,
                 channel_id,
@@ -52,13 +57,14 @@ public class TwitchChatRouteTemplate extends RouteBuilder {
                 :#${body.nonce},
                 CAST('{}' AS jsonb)
               )
-              """)
-          .to("seda:twitch-chat-listener");
-    }
+            """)
+        .sample(100)
+        .log("Inserted message into database: ${body.channel.name} ${body.messageEvent.messageId}");
 
     from("seda:twitch-chat-listener")
-        .log("Published message to SEDA: ${body.messageEvent.messageId}")
-        .bean(TwitchStreamService.class, "publish");
+        .bean(Twitch.class, "publish")
+        .sample(100)
+        .log("Published message to SEDA: ${body.channel.name} ${body.messageEvent.messageId}");
 
     from("direct:twitch-chat-top-chatters")
         .to("""
@@ -186,6 +192,71 @@ public class TwitchChatRouteTemplate extends RouteBuilder {
               WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
               GROUP BY hour
               ORDER BY hour
+            """);
+
+    from("direct:twitch-chatter-summary")
+        .to("""
+            sql:
+              SELECT
+                COUNT(*) AS messages,
+                ROUND(AVG(LENGTH(message))::numeric, 2) AS average_message_length,
+                MAX(subscriber_months) AS subscriber_months,
+                MODE() WITHIN GROUP (ORDER BY subscription_tier) AS tier
+              FROM twitch_event_chat
+              WHERE LOWER(TRIM(user_name)) = LOWER(TRIM(:#${body}))
+            """);
+
+    from("direct:twitch-chatter-by-channel")
+        .to("""
+            sql:
+              SELECT
+                channel_name AS channel,
+                COUNT(*) AS messages,
+                ROUND(AVG(LENGTH(message))::numeric, 2) AS average_message_length
+              FROM twitch_event_chat
+              WHERE LOWER(TRIM(user_name)) = LOWER(TRIM(:#${body}))
+              GROUP BY channel_name
+              ORDER BY messages DESC
+            """);
+
+    from("direct:twitch-chatter-timeline")
+        .to("""
+            sql:
+              SELECT
+                CAST(EXTRACT(EPOCH FROM DATE_TRUNC('minute', event_time)) * 1000 AS BIGINT) AS time,
+                COUNT(*) AS value
+              FROM twitch_event_chat
+              WHERE LOWER(TRIM(user_name)) = LOWER(TRIM(:#${body}))
+              GROUP BY time
+              ORDER BY time
+            """);
+
+    from("direct:twitch-chatter-lengths")
+        .to("""
+            sql:
+              SELECT
+                CASE
+                  WHEN LENGTH(message) < 20 THEN '0-19'
+                  WHEN LENGTH(message) < 50 THEN '20-49'
+                  WHEN LENGTH(message) < 100 THEN '50-99'
+                  WHEN LENGTH(message) < 200 THEN '100-199'
+                  ELSE '200+'
+                END AS bucket,
+                COUNT(*) AS count
+              FROM twitch_event_chat
+              WHERE LOWER(TRIM(user_name)) = LOWER(TRIM(:#${body}))
+              GROUP BY bucket
+              ORDER BY MIN(LENGTH(message))
+            """);
+
+    from("direct:twitch-chatter-tiers")
+        .to("""
+            sql:
+              SELECT subscription_tier AS tier, COUNT(*) AS count
+              FROM twitch_event_chat
+              WHERE LOWER(TRIM(user_name)) = LOWER(TRIM(:#${body}))
+              GROUP BY subscription_tier
+              ORDER BY subscription_tier
             """);
   }
 }
