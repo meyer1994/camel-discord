@@ -64,22 +64,6 @@
             <div id="hour-chart" class="h-64 w-full"></div>
           </div>
         </div>
-        <div class="card min-w-0 bg-base-100 shadow">
-          <div class="card-body p-4">
-            <h2 class="card-title text-base">Chatter constellation</h2>
-            <p class="text-xs opacity-60">The most connected voices in chat</p>
-            <div id="constellation-chart" class="h-64 w-full"></div>
-          </div>
-        </div>
-        <div class="card min-w-0 bg-base-100 shadow">
-          <div class="card-body p-4">
-            <div class="flex items-center justify-between">
-              <h2 class="card-title text-base">Chat leaderboard</h2><span class="badge badge-primary badge-outline">Top
-                10</span>
-            </div>
-            <div id="leaderboard" class="divide-y divide-base-300"></div>
-          </div>
-        </div>
       </section>
 
       <aside
@@ -105,7 +89,6 @@
     const chartLengths = createChart("lengths-chart", "#fbbd23");
     const chartTiers = createChart("tiers-chart", "#00d3bb");
     const chartHour = createChart("hour-chart", "#3abff8");
-    const chartConstellation = echarts.init(document.getElementById("constellation-chart"));
 
     function createChart(elementId, color) {
       const chart = echarts.init(document.getElementById(elementId));
@@ -113,7 +96,7 @@
       return chart;
     }
 
-    function points(data) { return (data.points || data.items || data).map(point => [point.time || point.timestamp || point.label, Number(point.value ?? point.count ?? point.total ?? 0)]); }
+    function points(data) { return (data || []).map(point => [point.time || point.timestamp || point.label, Number(point.value ?? point.count ?? point.total ?? 0)]); }
 
     async function fetchStats(path) {
       const response = await fetch(`${path}?channel=${encodeURIComponent(channel)}`);
@@ -128,65 +111,30 @@
     async function refreshLengthsChart() {
       const data = await fetchStats("/api/stats/messages/length");
       chartLengths.setOption({ 
-        xAxis: { type: "category", data: (data.items || data).map(item => item.label ?? item.length ?? item.bucket) }, 
+        xAxis: { type: "category", data: data.map(item => item.label ?? item.length ?? item.bucket) }, 
         series: [{ type: "bar", itemStyle: { color: "#fbbd23" }, 
-        data: (data.items || data).map(item => item.value ?? item.count ?? 0) 
+        data: data.map(item => item.value ?? item.count ?? 0) 
         }] 
       });
     }
 
     async function refreshTiersChart() {
       const data = await fetchStats("/api/stats/subscribers/tiers");
-      chartTiers.setOption({ tooltip: { trigger: "item" }, legend: { bottom: 0, textStyle: { color: "#a6adbb" } }, series: [{ type: "pie", radius: ["35%", "68%"], itemStyle: { borderRadius: 5, borderColor: "#1d232a", borderWidth: 2 }, data: (data.items || data).map(item => ({ name: item.label ?? item.tier, value: item.value ?? item.count ?? 0 })) }] });
+      chartTiers.setOption({ tooltip: { trigger: "item" }, legend: { bottom: 0, textStyle: { color: "#a6adbb" } }, series: [{ type: "pie", radius: ["35%", "68%"], itemStyle: { borderRadius: 5, borderColor: "#1d232a", borderWidth: 2 }, data: data.map(item => ({ name: item.label ?? item.tier ?? "Unknown", value: item.value ?? item.count ?? 0 })) }] });
     }
 
     async function refreshActivityByHourChart() {
       const data = await fetchStats("/api/stats/activity/hour");
-      chartHour.setOption({ xAxis: { type: "category", data: (data.items || data).map(item => item.label ?? item.hour) }, series: [{ type: "bar", itemStyle: { color: "#3abff8" }, data: (data.items || data).map(item => item.value ?? item.count ?? 0) }] });
-    }
-
-    async function refreshConstellationChart() {
-      const data = await fetchStats("/api/stats/chatters/constellation");
-      const items = data.items || data;
-      chartConstellation.setOption({
-        animation: false,
-        grid: { top: 18, right: 16, bottom: 34, left: 48 },
-        tooltip: {
-          formatter: params => `${params.data.user}<br>Messages: ${params.data.messageCount}<br>Avg. length: ${params.data.averageMessageLength}`
-        },
-        xAxis: { type: "value", name: "Messages", minInterval: 1 },
-        yAxis: { type: "value", name: "Avg. length" },
-        series: [{
-          type: "scatter",
-          symbolSize: item => Math.max(8, Math.min(42, Number(item.subscriberMonths || 0) + 8)),
-          itemStyle: { color: "#a855f7", opacity: 0.8 },
-          data: items.map(item => ({
-            user: item.user,
-            messageCount: Number(item.messageCount || 0),
-            averageMessageLength: Number(item.averageMessageLength || 0),
-            subscriberMonths: Number(item.subscriberMonths || 0),
-            value: [Number(item.messageCount || 0), Number(item.averageMessageLength || 0)]
-          }))
-        }]
-      });
-    }
-
-    async function refreshLeaderboard() {
-      const data = await fetchStats("/api/stats/chatters/top");
-      const leaderboard = document.getElementById("leaderboard");
-      leaderboard.replaceChildren();
-      const items = data.items || data;
-      if (!items.length) { const empty = document.createElement("p"); empty.className = "py-2 text-sm opacity-60"; empty.textContent = "No data yet"; leaderboard.append(empty); return; }
-      items.slice(0, 10).forEach((item, index) => { const row = document.createElement("div"); row.className = "flex items-center gap-3 py-2 text-sm"; const rank = document.createElement("span"); rank.className = "w-5 text-center font-mono text-xs opacity-60"; rank.textContent = index + 1; const user = document.createElement("span"); user.className = "min-w-0 flex-1 truncate font-medium"; user.textContent = item.user ?? item.username ?? item.name; const count = document.createElement("span"); count.className = "font-mono text-xs opacity-70"; count.textContent = Number(item.count ?? item.value ?? 0).toLocaleString(); row.append(rank, user, count); leaderboard.append(row); });
+      chartHour.setOption({ xAxis: { type: "category", data: data.map(item => item.label ?? item.hour) }, series: [{ type: "bar", itemStyle: { color: "#3abff8" }, data: data.map(item => item.value ?? item.count ?? 0) }] });
     }
 
     function refreshAll() {
-      refreshMessagesChart().catch(console.error); refreshVelocityChart().catch(console.error); refreshChattersChart().catch(console.error); refreshLengthsChart().catch(console.error); refreshTiersChart().catch(console.error); refreshActivityByHourChart().catch(console.error); refreshConstellationChart().catch(console.error); refreshLeaderboard().catch(console.error);
+      refreshMessagesChart().catch(console.error); refreshVelocityChart().catch(console.error); refreshChattersChart().catch(console.error); refreshLengthsChart().catch(console.error); refreshTiersChart().catch(console.error); refreshActivityByHourChart().catch(console.error);
     }
 
     refreshAll();
     setInterval(refreshAll, 5000);
-    window.addEventListener("resize", () => { chartMessages.resize(); chartVelocity.resize(); chartChatters.resize(); chartLengths.resize(); chartTiers.resize(); chartHour.resize(); chartConstellation.resize(); });
+    window.addEventListener("resize", () => { chartMessages.resize(); chartVelocity.resize(); chartChatters.resize(); chartLengths.resize(); chartTiers.resize(); chartHour.resize(); });
   </script>
 </body>
 
