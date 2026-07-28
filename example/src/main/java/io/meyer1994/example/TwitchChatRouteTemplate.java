@@ -75,7 +75,7 @@ public class TwitchChatRouteTemplate extends RouteBuilder {
         .to("""
             sql:
               SELECT
-                CAST(EXTRACT(EPOCH FROM DATE_TRUNC('second', event_time)) * 1000 AS BIGINT) AS time,
+                CAST(EXTRACT(EPOCH FROM DATE_TRUNC('minute', event_time)) * 1000 AS BIGINT) AS time,
                 COUNT(*) AS value
               FROM twitch_event_chat
               WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
@@ -115,6 +115,19 @@ public class TwitchChatRouteTemplate extends RouteBuilder {
                 ) AS value
               FROM messages_per_second
               ORDER BY second
+            """);
+
+    from("direct:twitch-chat-chatters-5min")
+        .to("""
+            sql:
+              SELECT
+                CAST(EXTRACT(EPOCH FROM DATE_TRUNC('minute', event_time)) * 1000 AS BIGINT) AS time,
+                COUNT(DISTINCT user_id) AS value
+              FROM twitch_event_chat
+              WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
+                AND event_time >= NOW() - INTERVAL '5 minutes'
+              GROUP BY time
+              ORDER BY time
             """);
   }
 }

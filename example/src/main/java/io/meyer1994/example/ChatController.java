@@ -69,6 +69,12 @@ public class ChatController {
     }
 
     @ResponseBody
+    @GetMapping("/api/stats/chatters")
+    public Map<String, Object> chatters(@RequestParam("channel") String channel) {
+        return timeSeries("direct:twitch-chat-chatters-5min", channel);
+    }
+
+    @ResponseBody
     @GetMapping("/api/stats/chatters/top")
     public Map<String, Object> topChatters(@RequestParam("channel") String channel) {
         List<Map<String, Object>> rows = producer.requestBody(

@@ -26,7 +26,7 @@
       <section class="grid items-start gap-4 sm:gap-6">
         <div class="card h-fit w-full self-start bg-base-100 shadow">
           <div class="card-body p-4 sm:p-6">
-            <h2 class="card-title">Messages per second</h2>
+            <h2 class="card-title">Messages per minute</h2>
             <p class="text-sm opacity-60">Last five minutes</p>
             <div id="messages-chart" class="h-64 w-full flex-none"></div>
           </div>
@@ -37,6 +37,14 @@
             <h2 class="card-title">Chat velocity</h2>
             <p class="text-sm opacity-60">10-second rolling average</p>
             <div id="velocity-chart" class="h-64 w-full flex-none"></div>
+          </div>
+        </div>
+
+        <div class="card h-fit w-full self-start bg-base-100 shadow">
+          <div class="card-body p-4 sm:p-6">
+            <h2 class="card-title">Unique chatters per minute</h2>
+            <p class="text-sm opacity-60">Last five minutes</p>
+            <div id="chatters-chart" class="h-64 w-full flex-none"></div>
           </div>
         </div>
 
@@ -73,6 +81,7 @@
     const channel = /*[[${channel}]]*/ "channel";
     const chartMessages = createChart("messages-chart", "#570df8");
     const chartVelocity = createChart("velocity-chart", "#f000b8");
+    const chartChatters = createChart("chatters-chart", "#37cdbe");
 
     function createChart(elementId, color) {
       const chart = echarts.init(document.getElementById(elementId));
@@ -118,6 +127,10 @@
 
     async function refreshVelocityChart() {
       await refreshChart("/api/stats/velocity", chartVelocity);
+    }
+
+    async function refreshChattersChart() {
+      await refreshChart("/api/stats/chatters", chartChatters);
     }
 
     async function refreshLeaderboard() {
@@ -173,6 +186,7 @@
     function refreshAll() {
       refreshMessagesChart().catch(console.error);
       refreshVelocityChart().catch(console.error);
+      refreshChattersChart().catch(console.error);
       refreshLeaderboard().catch(console.error);
     }
 
@@ -181,6 +195,7 @@
     window.addEventListener("resize", () => {
       chartMessages.resize();
       chartVelocity.resize();
+      chartChatters.resize();
     });
 
     document.body.addEventListener("htmx:afterSettle", event => {
