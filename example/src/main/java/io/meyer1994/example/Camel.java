@@ -81,11 +81,24 @@ public class Camel extends RouteBuilder {
         .to("""
             sql:
               SELECT
-                CAST(EXTRACT(EPOCH FROM DATE_TRUNC('minute', event_time)) * 1000 AS BIGINT) AS time,
+                CAST(EXTRACT(EPOCH FROM DATE_TRUNC('second', event_time)) * 1000 AS BIGINT) AS time,
                 COUNT(*) AS value
               FROM twitch_event_chat
               WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
                 AND event_time >= NOW() - INTERVAL '5 minutes'
+              GROUP BY time
+              ORDER BY time
+            """);
+
+    from("direct:twitch-chat-messages-1h")
+        .to("""
+            sql:
+              SELECT
+                CAST(EXTRACT(EPOCH FROM DATE_TRUNC('minute', event_time)) * 1000 AS BIGINT) AS time,
+                COUNT(*) AS value
+              FROM twitch_event_chat
+              WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
+                AND event_time >= NOW() - INTERVAL '1 hour'
               GROUP BY time
               ORDER BY time
             """);
@@ -127,7 +140,7 @@ public class Camel extends RouteBuilder {
         .to("""
             sql:
               SELECT
-                CAST(EXTRACT(EPOCH FROM DATE_TRUNC('minute', event_time)) * 1000 AS BIGINT) AS time,
+                CAST(EXTRACT(EPOCH FROM DATE_TRUNC('second', event_time)) * 1000 AS BIGINT) AS time,
                 COUNT(DISTINCT user_id) AS value
               FROM twitch_event_chat
               WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
@@ -223,10 +236,11 @@ public class Camel extends RouteBuilder {
         .to("""
             sql:
               SELECT
-                CAST(EXTRACT(EPOCH FROM DATE_TRUNC('minute', event_time)) * 1000 AS BIGINT) AS time,
+                CAST(EXTRACT(EPOCH FROM DATE_TRUNC('second', event_time)) * 1000 AS BIGINT) AS time,
                 COUNT(*) AS value
               FROM twitch_event_chat
               WHERE LOWER(TRIM(user_name)) = LOWER(TRIM(:#${body}))
+                AND event_time >= NOW() - INTERVAL '5 minutes'
               GROUP BY time
               ORDER BY time
             """);

@@ -67,6 +67,12 @@ public class Routes {
     }
 
     @ResponseBody
+    @GetMapping("/api/stats/messages/hour")
+    public List<Map<String, Object>> messagesLastHour(@RequestParam("channel") String channel) {
+        return rows("direct:twitch-chat-messages-1h", channel);
+    }
+
+    @ResponseBody
     @GetMapping("/api/stats/messages/total")
     public List<Map<String, Object>> totalMessages(@RequestParam("channel") String channel) {
         return rows("direct:twitch-chat-message-count", channel);
