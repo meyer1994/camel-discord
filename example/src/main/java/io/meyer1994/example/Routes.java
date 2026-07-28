@@ -42,7 +42,7 @@ public class Routes {
         return "channel";
     }
 
-    @GetMapping(path = "/chatter", produces = MediaType.TEXT_HTML_VALUE)
+    @GetMapping(path = { "/chatter", "/chatters" }, produces = MediaType.TEXT_HTML_VALUE)
     public String chatter(@RequestParam("chatter") String chatter, Model model) {
         model.addAttribute("chatter", chatter);
         return "chatter";

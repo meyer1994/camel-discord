@@ -1,5 +1,7 @@
 package io.meyer1994.example;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -19,7 +21,7 @@ public class Twitch {
     private static final String MESSAGE_TEMPLATE = """
             <div class="chat chat-start py-0.5" title="%s">
               <div class="chat-header gap-1 text-xs leading-tight">
-                %s
+                <a class="font-semibold hover:text-primary" href="/chatters?chatter=%s">%s</a>
                 <time class="opacity-50" title="%s">%s</time>
               </div>
               <div class="chat-bubble min-h-0 px-3 py-1.5 text-sm leading-tight">%s</div>
@@ -53,9 +55,11 @@ public class Twitch {
     public void publish(ChannelMessageEvent event) {
         String channel = normalize(event.getChannel().getName());
         String chatter = normalize(event.getUser().getName());
+        String chatterUrl = URLEncoder.encode(event.getUser().getName(), StandardCharsets.UTF_8);
 
         String html = MESSAGE_TEMPLATE.formatted(
                 event.getFiredAtInstant(),
+                chatterUrl,
                 event.getUser().getName(),
                 event.getFiredAtInstant(),
                 CHAT_TIME_FORMAT.format(event.getFiredAtInstant()),
