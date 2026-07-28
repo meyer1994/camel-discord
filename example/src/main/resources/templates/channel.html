@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="dark" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Twitch Chat</title>
+  <title>Twitch Chat - Channel</title>
   <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css">
   <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css">
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
@@ -17,7 +17,7 @@
       <span class="text-lg font-bold sm:text-xl">Twitch Chat</span>
     </div>
     <div class="flex-none">
-      <span class="badge badge-primary badge-outline">#__CHANNEL__</span>
+      <span class="badge badge-primary badge-outline" th:text="${channel}">channel</span>
     </div>
   </div>
 
@@ -60,7 +60,7 @@
           <div id="messages"
                class="min-h-0 flex-1 space-y-0 overflow-y-auto break-words p-1.5 sm:p-2"
                hx-ext="sse"
-               sse-connect="/events?channel=__CHANNEL__"
+               th:attr="sse-connect=@{/events(channel=${channel})}"
                sse-swap="chat"
                hx-swap="beforeend">
           </div>
@@ -69,8 +69,8 @@
     </div>
   </main>
 
-  <script>
-    const channel = "__CHANNEL__";
+  <script th:inline="javascript">
+    const channel = /*[[${channel}]]*/ "channel";
     const chartMessages = createChart("messages-chart", "#570df8");
     const chartVelocity = createChart("velocity-chart", "#f000b8");
 

@@ -14,3 +14,9 @@ CREATE TABLE IF NOT EXISTS twitch_event_chat (
     raw_event JSONB NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_twitch_event_chat_channel_time
+    ON twitch_event_chat (LOWER(channel_name), event_time);
+
+CREATE INDEX IF NOT EXISTS idx_twitch_event_chat_channel_user
+    ON twitch_event_chat (LOWER(channel_name), user_name);

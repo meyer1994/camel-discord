@@ -84,6 +84,14 @@ public class TwitchChatRouteTemplate extends RouteBuilder {
               ORDER BY time
             """);
 
+    from("direct:twitch-chat-message-count")
+        .to("""
+            sql:
+              SELECT COUNT(*) AS total
+              FROM twitch_event_chat
+              WHERE LOWER(channel_name) = LOWER(:#${body})
+            """);
+
     from("direct:twitch-chat-velocity-5min")
         .to("""
             sql:
