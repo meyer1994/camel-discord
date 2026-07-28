@@ -129,5 +129,63 @@ public class TwitchChatRouteTemplate extends RouteBuilder {
               GROUP BY time
               ORDER BY time
             """);
+
+    from("direct:twitch-chat-message-lengths")
+        .to("""
+            sql:
+              SELECT
+                CASE
+                  WHEN LENGTH(message) < 20 THEN '0-19'
+                  WHEN LENGTH(message) < 50 THEN '20-49'
+                  WHEN LENGTH(message) < 100 THEN '50-99'
+                  WHEN LENGTH(message) < 200 THEN '100-199'
+                  ELSE '200+'
+                END AS bucket,
+                COUNT(*) AS count
+              FROM twitch_event_chat
+              WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
+              GROUP BY bucket
+              ORDER BY MIN(LENGTH(message))
+            """);
+
+    from("direct:twitch-chat-chatter-constellation")
+        .to("""
+            sql:
+              SELECT
+                COALESCE(user_name, 'anonymous') AS username,
+                COUNT(*) AS message_count,
+                ROUND(AVG(LENGTH(message))::numeric, 2) AS average_message_length,
+                MAX(subscriber_months) AS subscriber_months,
+                MODE() WITHIN GROUP (ORDER BY subscription_tier) AS tier
+              FROM twitch_event_chat
+              WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
+              GROUP BY user_name
+              ORDER BY message_count DESC
+              LIMIT 100
+            """);
+
+    from("direct:twitch-chat-subscription-tiers")
+        .to("""
+            sql:
+              SELECT
+                subscription_tier AS tier,
+                COUNT(*) AS count
+              FROM twitch_event_chat
+              WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
+              GROUP BY subscription_tier
+              ORDER BY subscription_tier
+            """);
+
+    from("direct:twitch-chat-activity-by-hour")
+        .to("""
+            sql:
+              SELECT
+                EXTRACT(HOUR FROM event_time)::INTEGER AS hour,
+                COUNT(*) AS count
+              FROM twitch_event_chat
+              WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
+              GROUP BY hour
+              ORDER BY hour
+            """);
   }
 }

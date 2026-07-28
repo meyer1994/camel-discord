@@ -85,6 +85,61 @@ public class ChatController {
         return Map.of("items", items);
     }
 
+    @ResponseBody
+    @GetMapping("/api/stats/messages/length")
+    public Map<String, Object> messageLengths(@RequestParam("channel") String channel) {
+        List<Map<String, Object>> rows = producer.requestBody(
+                "direct:twitch-chat-message-lengths", channel, List.class);
+        List<Map<String, Object>> items = rows.stream()
+                .map(row -> Map.of(
+                        "bucket", column(row, "bucket"),
+                        "count", column(row, "count")))
+                .toList();
+        return Map.of("items", items);
+    }
+
+    @ResponseBody
+    @GetMapping("/api/stats/chatters/constellation")
+    public Map<String, Object> chatterConstellation(@RequestParam("channel") String channel) {
+        List<Map<String, Object>> rows = producer.requestBody(
+                "direct:twitch-chat-chatter-constellation", channel, List.class);
+        List<Map<String, Object>> items = rows.stream()
+                .map(row -> Map.of(
+                        "user", column(row, "username"),
+                        "messageCount", column(row, "message_count"),
+                        "averageMessageLength", column(row, "average_message_length"),
+                        "subscriberMonths", column(row, "subscriber_months"),
+                        "tier", column(row, "tier")))
+                .toList();
+        return Map.of("items", items);
+    }
+
+    @ResponseBody
+    @GetMapping("/api/stats/subscribers/tiers")
+    public Map<String, Object> subscriberTiers(@RequestParam("channel") String channel) {
+        List<Map<String, Object>> rows = producer.requestBody(
+                "direct:twitch-chat-subscription-tiers", channel, List.class);
+        List<Map<String, Object>> items = rows.stream()
+                .map(row -> Map.of(
+                        "tier", column(row, "tier"),
+                        "count", column(row, "count")))
+                .toList();
+        return Map.of("items", items);
+    }
+
+    @ResponseBody
+    @GetMapping("/api/stats/activity/hour")
+    public Map<String, Object> activityByHour(@RequestParam("channel") String channel) {
+        List<Map<String, Object>> rows = producer.requestBody(
+                "direct:twitch-chat-activity-by-hour", channel, List.class);
+        List<Map<String, Object>> items = rows.stream()
+                .map(row -> Map.of(
+                        "hour", column(row, "hour"),
+                        "count", column(row, "count")))
+                .toList();
+        return Map.of("items", items);
+    }
+
     @SuppressWarnings("unchecked")
     private Map<String, Object> timeSeries(String route, String channel) {
         List<Map<String, Object>> rows = producer.requestBody(route, channel, List.class);
