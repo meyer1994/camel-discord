@@ -1,0 +1,599 @@
+[
+  {
+    "id": 48,
+    "title": "Phrase Velocity",
+    "description": "Message counts over time for the eight most-used normalized phrases in the selected range.",
+    "type": "timeseries",
+    "gridPos": {
+      "h": 8,
+      "w": 12,
+      "x": 0,
+      "y": 174
+    },
+    "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "postgres"
+    },
+    "fieldConfig": {
+      "defaults": {
+        "color": {
+          "mode": "palette-classic"
+        },
+        "custom": {
+          "drawStyle": "line",
+          "fillOpacity": 14,
+          "lineInterpolation": "smooth",
+          "lineWidth": 2,
+          "pointSize": 4,
+          "showPoints": "never",
+          "spanNulls": true,
+          "stacking": {
+            "group": "A",
+            "mode": "none"
+          }
+        },
+        "mappings": [],
+        "unit": "short"
+      },
+      "overrides": []
+    },
+    "options": {
+      "legend": {
+        "calcs": [
+          "sum",
+          "max"
+        ],
+        "displayMode": "table",
+        "placement": "bottom",
+        "showLegend": true
+      },
+      "tooltip": {
+        "mode": "multi",
+        "sort": "desc"
+      }
+    },
+    "targets": [
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres"
+        },
+        "editorMode": "code",
+        "format": "time_series",
+        "rawQuery": true,
+        "rawSql": "WITH normalized AS (\n  SELECT\n    event_time,\n    BTRIM(regexp_replace(lower(regexp_replace(message, '[^[:alnum:]@#[:space:]]+', ' ', 'g')), '[[:space:]]+', ' ', 'g')) AS phrase\n  FROM twitch_event_chat\n  WHERE $__timeFilter(event_time)\n    AND channel_name IN (${channel:sqlstring})\n), top_phrases AS (\n  SELECT phrase\n  FROM normalized\n  WHERE phrase <> ''\n  GROUP BY phrase\n  HAVING COUNT(*) >= 3\n  ORDER BY COUNT(*) DESC, phrase\n  LIMIT 8\n)\nSELECT\n  $__timeGroupAlias(n.event_time, $__interval),\n  LEFT(n.phrase, 80) AS metric,\n  COUNT(*) AS value\nFROM normalized n\nJOIN top_phrases t USING (phrase)\nGROUP BY 1, 2\nORDER BY 1, 2",
+        "refId": "A"
+      }
+    ]
+  },
+  {
+    "id": 49,
+    "title": "Cross-Channel Meme Migration",
+    "description": "Tracks a normalized phrase's first appearance in successive channels and the delay between arrivals.",
+    "type": "table",
+    "gridPos": {
+      "h": 8,
+      "w": 12,
+      "x": 12,
+      "y": 174
+    },
+    "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "postgres"
+    },
+    "fieldConfig": {
+      "defaults": {
+        "mappings": []
+      },
+      "overrides": []
+    },
+    "options": {
+      "cellHeight": "sm",
+      "footer": {
+        "countRows": false,
+        "fields": "",
+        "reducer": [
+          "sum"
+        ],
+        "show": false
+      },
+      "showHeader": true,
+      "sortBy": [
+        {
+          "desc": false,
+          "displayName": "Lag (minutes)"
+        }
+      ]
+    },
+    "targets": [
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres"
+        },
+        "editorMode": "code",
+        "format": "table",
+        "rawQuery": true,
+        "rawSql": "WITH normalized AS (\n  SELECT\n    event_time,\n    event_time AT TIME ZONE '${timezone}' AS local_time,\n    channel_name,\n    BTRIM(regexp_replace(lower(regexp_replace(message, '[^[:alnum:]@#[:space:]]+', ' ', 'g')), '[[:space:]]+', ' ', 'g')) AS phrase\n  FROM twitch_event_chat\n  WHERE $__timeFilter(event_time)\n    AND channel_name IN (${channel:sqlstring})\n), per_channel AS (\n  SELECT\n    phrase,\n    channel_name,\n    MIN(event_time) AS first_seen,\n    MIN(local_time) AS first_seen_local,\n    COUNT(*) AS occurrences\n  FROM normalized\n  WHERE phrase <> ''\n  GROUP BY phrase, channel_name\n), eligible AS (\n  SELECT phrase\n  FROM per_channel\n  GROUP BY phrase\n  HAVING COUNT(*) > 1\n     AND SUM(occurrences) >= 3\n), ordered AS (\n  SELECT\n    p.*,\n    LAG(channel_name) OVER (PARTITION BY phrase ORDER BY first_seen, channel_name) AS previous_channel,\n    LAG(first_seen) OVER (PARTITION BY phrase ORDER BY first_seen, channel_name) AS previous_seen\n  FROM per_channel p\n  JOIN eligible e USING (phrase)\n)\nSELECT\n  LEFT(phrase, 100) AS \"Phrase\",\n  previous_channel AS \"From\",\n  channel_name AS \"To\",\n  TO_CHAR(first_seen_local, 'YYYY-MM-DD HH24:MI:SS') AS \"Arrival\",\n  ROUND((EXTRACT(EPOCH FROM (first_seen - previous_seen)) / 60.0)::numeric, 1) AS \"Lag (minutes)\",\n  occurrences AS \"Messages at destination\"\nFROM ordered\nWHERE previous_channel IS NOT NULL\nORDER BY first_seen, phrase, channel_name\nLIMIT 50",
+        "refId": "A"
+      }
+    ]
+  },
+  {
+    "id": 50,
+    "title": "Lexical Diversity by Channel",
+    "description": "Distinct words as a percentage of all words used by each selected channel.",
+    "type": "barchart",
+    "gridPos": {
+      "h": 8,
+      "w": 8,
+      "x": 0,
+      "y": 182
+    },
+    "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "postgres"
+    },
+    "fieldConfig": {
+      "defaults": {
+        "color": {
+          "mode": "continuous-BlPu"
+        },
+        "decimals": 1,
+        "mappings": [],
+        "max": 100,
+        "min": 0,
+        "unit": "percent"
+      },
+      "overrides": []
+    },
+    "options": {
+      "barRadius": 0,
+      "barWidth": 0.8,
+      "groupWidth": 0.7,
+      "legend": {
+        "calcs": [],
+        "displayMode": "hidden",
+        "placement": "bottom",
+        "showLegend": false
+      },
+      "orientation": "horizontal",
+      "showValue": "always",
+      "stacking": "none",
+      "tooltip": {
+        "mode": "single",
+        "sort": "none"
+      },
+      "xTickLabelRotation": 0,
+      "xTickLabelSpacing": 0
+    },
+    "targets": [
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres"
+        },
+        "editorMode": "code",
+        "format": "table",
+        "rawQuery": true,
+        "rawSql": "WITH selected AS (\n  SELECT channel_name, message\n  FROM twitch_event_chat\n  WHERE $__timeFilter(event_time)\n    AND channel_name IN (${channel:sqlstring})\n), tokens AS (\n  SELECT s.channel_name, t.token\n  FROM selected s\n  CROSS JOIN LATERAL regexp_split_to_table(\n    lower(regexp_replace(s.message, '[^[:alnum:]_]+', ' ', 'g')),\n    '[[:space:]]+'\n  ) AS t(token)\n  WHERE LENGTH(t.token) >= 2\n)\nSELECT\n  channel_name AS \"Channel\",\n  ROUND((100.0 * COUNT(DISTINCT token) / NULLIF(COUNT(*), 0))::numeric, 1) AS \"Lexical diversity\"\nFROM tokens\nGROUP BY channel_name\nORDER BY \"Lexical diversity\" DESC, \"Channel\"",
+        "refId": "A"
+      }
+    ]
+  },
+  {
+    "id": 51,
+    "title": "Novelty Score Over Time",
+    "description": "Percentage of each bucket's vocabulary first observed in that channel during the selected range.",
+    "type": "timeseries",
+    "gridPos": {
+      "h": 8,
+      "w": 8,
+      "x": 8,
+      "y": 182
+    },
+    "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "postgres"
+    },
+    "fieldConfig": {
+      "defaults": {
+        "color": {
+          "mode": "palette-classic"
+        },
+        "custom": {
+          "drawStyle": "line",
+          "fillOpacity": 18,
+          "lineInterpolation": "smooth",
+          "lineWidth": 2,
+          "pointSize": 4,
+          "showPoints": "never",
+          "spanNulls": true,
+          "stacking": {
+            "group": "A",
+            "mode": "none"
+          }
+        },
+        "decimals": 1,
+        "mappings": [],
+        "max": 100,
+        "min": 0,
+        "unit": "percent"
+      },
+      "overrides": []
+    },
+    "options": {
+      "legend": {
+        "calcs": [
+          "mean",
+          "lastNotNull"
+        ],
+        "displayMode": "table",
+        "placement": "bottom",
+        "showLegend": true
+      },
+      "tooltip": {
+        "mode": "multi",
+        "sort": "desc"
+      }
+    },
+    "targets": [
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres"
+        },
+        "editorMode": "code",
+        "format": "time_series",
+        "rawQuery": true,
+        "rawSql": "WITH selected AS (\n  SELECT event_time, channel_name, message\n  FROM twitch_event_chat\n  WHERE $__timeFilter(event_time)\n    AND channel_name IN (${channel:sqlstring})\n), tokens AS (\n  SELECT s.event_time, s.channel_name, t.token\n  FROM selected s\n  CROSS JOIN LATERAL regexp_split_to_table(\n    lower(regexp_replace(s.message, '[^[:alnum:]_]+', ' ', 'g')),\n    '[[:space:]]+'\n  ) AS t(token)\n  WHERE LENGTH(t.token) >= 2\n), first_seen AS (\n  SELECT channel_name, token, MIN(event_time) AS first_seen\n  FROM tokens\n  GROUP BY channel_name, token\n)\nSELECT\n  $__timeGroupAlias(t.event_time, $__interval),\n  t.channel_name AS metric,\n  ROUND((\n    100.0 * COUNT(DISTINCT t.token) FILTER (\n      WHERE $__timeGroup(f.first_seen, $__interval) = $__timeGroup(t.event_time, $__interval)\n    ) / NULLIF(COUNT(DISTINCT t.token), 0)\n  )::numeric, 1) AS value\nFROM tokens t\nJOIN first_seen f\n  ON f.channel_name = t.channel_name\n AND f.token = t.token\nGROUP BY 1, 2\nORDER BY 1, 2",
+        "refId": "A"
+      }
+    ]
+  },
+  {
+    "id": 52,
+    "title": "Echo Coefficient by Channel",
+    "description": "Percentage of messages repeating another user's normalized phrase within the previous 60 seconds.",
+    "type": "barchart",
+    "gridPos": {
+      "h": 8,
+      "w": 8,
+      "x": 16,
+      "y": 182
+    },
+    "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "postgres"
+    },
+    "fieldConfig": {
+      "defaults": {
+        "color": {
+          "mode": "continuous-PuBuGn"
+        },
+        "decimals": 1,
+        "mappings": [],
+        "max": 100,
+        "min": 0,
+        "unit": "percent"
+      },
+      "overrides": []
+    },
+    "options": {
+      "barRadius": 0,
+      "barWidth": 0.8,
+      "groupWidth": 0.7,
+      "legend": {
+        "calcs": [],
+        "displayMode": "hidden",
+        "placement": "bottom",
+        "showLegend": false
+      },
+      "orientation": "horizontal",
+      "showValue": "always",
+      "stacking": "none",
+      "tooltip": {
+        "mode": "single",
+        "sort": "none"
+      },
+      "xTickLabelRotation": 0,
+      "xTickLabelSpacing": 0
+    },
+    "targets": [
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres"
+        },
+        "editorMode": "code",
+        "format": "table",
+        "rawQuery": true,
+        "rawSql": "WITH normalized AS (\n  SELECT\n    id,\n    event_time,\n    channel_name,\n    COALESCE(user_id, lower(user_name)) AS actor,\n    BTRIM(regexp_replace(lower(regexp_replace(message, '[^[:alnum:]@#[:space:]]+', ' ', 'g')), '[[:space:]]+', ' ', 'g')) AS phrase\n  FROM twitch_event_chat\n  WHERE $__timeFilter(event_time)\n    AND channel_name IN (${channel:sqlstring})\n    AND COALESCE(user_id, user_name) IS NOT NULL\n), sequenced AS (\n  SELECT\n    *,\n    LAG(event_time) OVER (PARTITION BY channel_name, phrase ORDER BY event_time, id) AS previous_time,\n    LAG(actor) OVER (PARTITION BY channel_name, phrase ORDER BY event_time, id) AS previous_actor\n  FROM normalized\n  WHERE phrase <> ''\n)\nSELECT\n  channel_name AS \"Channel\",\n  ROUND((\n    100.0 * COUNT(*) FILTER (\n      WHERE previous_time >= event_time - INTERVAL '60 seconds'\n        AND previous_actor IS DISTINCT FROM actor\n    ) / NULLIF(COUNT(*), 0)\n  )::numeric, 1) AS \"Echo coefficient\"\nFROM sequenced\nGROUP BY channel_name\nORDER BY \"Echo coefficient\" DESC, \"Channel\"",
+        "refId": "A"
+      }
+    ]
+  },
+  {
+    "id": 53,
+    "title": "Excitement Index",
+    "description": "Composite 0-100 score using uppercase, !/? density, repeated-character, and relative velocity proxies.",
+    "type": "timeseries",
+    "gridPos": {
+      "h": 8,
+      "w": 12,
+      "x": 0,
+      "y": 190
+    },
+    "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "postgres"
+    },
+    "fieldConfig": {
+      "defaults": {
+        "color": {
+          "mode": "palette-classic"
+        },
+        "custom": {
+          "drawStyle": "line",
+          "fillOpacity": 22,
+          "lineInterpolation": "smooth",
+          "lineWidth": 2,
+          "pointSize": 4,
+          "showPoints": "never",
+          "spanNulls": true,
+          "stacking": {
+            "group": "A",
+            "mode": "none"
+          }
+        },
+        "decimals": 1,
+        "mappings": [],
+        "max": 100,
+        "min": 0,
+        "unit": "percent"
+      },
+      "overrides": []
+    },
+    "options": {
+      "legend": {
+        "calcs": [
+          "mean",
+          "max"
+        ],
+        "displayMode": "table",
+        "placement": "bottom",
+        "showLegend": true
+      },
+      "tooltip": {
+        "mode": "multi",
+        "sort": "desc"
+      }
+    },
+    "targets": [
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres"
+        },
+        "editorMode": "code",
+        "format": "time_series",
+        "rawQuery": true,
+        "rawSql": "WITH bucket_signals AS (\n  SELECT\n    $__timeGroupAlias(event_time, $__interval),\n    channel_name,\n    COUNT(*)::numeric AS messages,\n    AVG(\n      COALESCE(\n        LENGTH(regexp_replace(message, '[^[:upper:]]', '', 'g'))::numeric\n        / NULLIF(LENGTH(regexp_replace(message, '[^[:alpha:]]', '', 'g')), 0),\n        0\n      )\n    ) AS caps_score,\n    AVG(\n      LEAST(\n        1.0,\n        LENGTH(regexp_replace(message, '[^!?]', '', 'g'))::numeric / 3.0\n      )\n    ) AS punctuation_score,\n    AVG(\n      CASE\n        WHEN message ~ '([[:alnum:]!?])\\1{2,}' THEN 1.0\n        ELSE 0.0\n      END\n    ) AS repetition_score\n  FROM twitch_event_chat\n  WHERE $__timeFilter(event_time)\n    AND channel_name IN (${channel:sqlstring})\n  GROUP BY 1, 2\n), scored AS (\n  SELECT\n    time,\n    channel_name,\n    caps_score,\n    punctuation_score,\n    repetition_score,\n    messages / NULLIF(MAX(messages) OVER (PARTITION BY channel_name), 0) AS velocity_score\n  FROM bucket_signals\n)\nSELECT\n  time,\n  channel_name AS metric,\n  ROUND((100.0 * (\n    0.30 * caps_score\n    + 0.20 * punctuation_score\n    + 0.20 * repetition_score\n    + 0.30 * velocity_score\n  ))::numeric, 1) AS value\nFROM scored\nORDER BY time, metric",
+        "refId": "A"
+      }
+    ]
+  },
+  {
+    "id": 54,
+    "title": "Mention Network (@username)",
+    "description": "Directed edges from chatters to @usernames extracted from message text; edge weight is mention count.",
+    "type": "nodeGraph",
+    "gridPos": {
+      "h": 8,
+      "w": 12,
+      "x": 12,
+      "y": 190
+    },
+    "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "postgres"
+    },
+    "fieldConfig": {
+      "defaults": {
+        "mappings": []
+      },
+      "overrides": []
+    },
+    "options": {
+      "nodes": {
+        "mainStatUnit": "short",
+        "secondaryStatUnit": "short"
+      },
+      "edges": {
+        "mainStatUnit": "short",
+        "secondaryStatUnit": "short"
+      }
+    },
+    "targets": [
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres"
+        },
+        "editorMode": "code",
+        "format": "table",
+        "rawQuery": true,
+        "rawSql": "WITH mentions AS (\n  SELECT\n    lower(COALESCE(NULLIF(e.user_name, ''), NULLIF(e.display_name, ''), e.user_id)) AS source,\n    lower(found.parts[1]) AS target\n  FROM twitch_event_chat e\n  CROSS JOIN LATERAL regexp_matches(\n    e.message,\n    '@([A-Za-z0-9_]{1,25})',\n    'g'\n  ) AS found(parts)\n  WHERE $__timeFilter(event_time)\n    AND channel_name IN (${channel:sqlstring})\n    AND COALESCE(NULLIF(e.user_name, ''), NULLIF(e.display_name, ''), e.user_id) IS NOT NULL\n), edges AS (\n  SELECT source, target, COUNT(*) AS mentions\n  FROM mentions\n  WHERE source <> target\n  GROUP BY source, target\n)\nSELECT\n  source || '→' || target AS id,\n  source,\n  target,\n  mentions AS mainstat\nFROM edges\nORDER BY mentions DESC, source, target\nLIMIT 100",
+        "refId": "A"
+      }
+    ]
+  },
+  {
+    "id": 55,
+    "title": "Display-Name Evolution",
+    "description": "Consecutive display-name periods for users who changed names during the selected range.",
+    "type": "table",
+    "gridPos": {
+      "h": 8,
+      "w": 12,
+      "x": 0,
+      "y": 198
+    },
+    "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "postgres"
+    },
+    "fieldConfig": {
+      "defaults": {
+        "mappings": []
+      },
+      "overrides": []
+    },
+    "options": {
+      "cellHeight": "sm",
+      "footer": {
+        "countRows": false,
+        "fields": "",
+        "reducer": [
+          "sum"
+        ],
+        "show": false
+      },
+      "showHeader": true,
+      "sortBy": [
+        {
+          "desc": true,
+          "displayName": "From"
+        }
+      ]
+    },
+    "targets": [
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres"
+        },
+        "editorMode": "code",
+        "format": "table",
+        "rawQuery": true,
+        "rawSql": "WITH selected AS (\n  SELECT\n    id,\n    event_time,\n    event_time AT TIME ZONE '${timezone}' AS local_time,\n    channel_name,\n    COALESCE(user_id, lower(user_name)) AS user_key,\n    user_name,\n    display_name\n  FROM twitch_event_chat\n  WHERE $__timeFilter(event_time)\n    AND channel_name IN (${channel:sqlstring})\n    AND COALESCE(user_id, user_name) IS NOT NULL\n    AND NULLIF(display_name, '') IS NOT NULL\n), evolving_users AS (\n  SELECT channel_name, user_key\n  FROM selected\n  GROUP BY channel_name, user_key\n  HAVING COUNT(DISTINCT display_name) > 1\n), marked AS (\n  SELECT\n    s.*,\n    CASE\n      WHEN display_name IS DISTINCT FROM LAG(display_name) OVER (\n        PARTITION BY channel_name, user_key\n        ORDER BY event_time, id\n      ) THEN 1\n      ELSE 0\n    END AS starts_run\n  FROM selected s\n  JOIN evolving_users e USING (channel_name, user_key)\n), grouped AS (\n  SELECT\n    *,\n    SUM(starts_run) OVER (\n      PARTITION BY channel_name, user_key\n      ORDER BY event_time, id\n      ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW\n    ) AS name_run\n  FROM marked\n)\nSELECT\n  channel_name AS \"Channel\",\n  COALESCE(MAX(user_name), user_key) AS \"User\",\n  display_name AS \"Display name\",\n  TO_CHAR(MIN(local_time), 'YYYY-MM-DD HH24:MI:SS') AS \"From\",\n  TO_CHAR(MAX(local_time), 'YYYY-MM-DD HH24:MI:SS') AS \"To\",\n  COUNT(*) AS \"Messages\"\nFROM grouped\nGROUP BY channel_name, user_key, display_name, name_run\nORDER BY MIN(event_time) DESC, channel_name, \"User\"\nLIMIT 100",
+        "refId": "A"
+      }
+    ]
+  },
+  {
+    "id": 56,
+    "title": "Repeated-Message Ratio",
+    "description": "Duplicate normalized messages as a percentage of all non-empty normalized messages per channel.",
+    "type": "barchart",
+    "gridPos": {
+      "h": 8,
+      "w": 12,
+      "x": 12,
+      "y": 198
+    },
+    "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "postgres"
+    },
+    "fieldConfig": {
+      "defaults": {
+        "color": {
+          "mode": "continuous-YlOrRd"
+        },
+        "decimals": 1,
+        "mappings": [],
+        "max": 100,
+        "min": 0,
+        "unit": "percent"
+      },
+      "overrides": []
+    },
+    "options": {
+      "barRadius": 0,
+      "barWidth": 0.8,
+      "groupWidth": 0.7,
+      "legend": {
+        "calcs": [],
+        "displayMode": "hidden",
+        "placement": "bottom",
+        "showLegend": false
+      },
+      "orientation": "horizontal",
+      "showValue": "always",
+      "stacking": "none",
+      "tooltip": {
+        "mode": "single",
+        "sort": "none"
+      },
+      "xTickLabelRotation": 0,
+      "xTickLabelSpacing": 0
+    },
+    "targets": [
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres"
+        },
+        "editorMode": "code",
+        "format": "table",
+        "rawQuery": true,
+        "rawSql": "WITH normalized AS (\n  SELECT\n    channel_name,\n    BTRIM(regexp_replace(lower(regexp_replace(message, '[^[:alnum:]@#[:space:]]+', ' ', 'g')), '[[:space:]]+', ' ', 'g')) AS phrase\n  FROM twitch_event_chat\n  WHERE $__timeFilter(event_time)\n    AND channel_name IN (${channel:sqlstring})\n)\nSELECT\n  channel_name AS \"Channel\",\n  ROUND((\n    100.0 * (COUNT(*) - COUNT(DISTINCT phrase)) / NULLIF(COUNT(*), 0)\n  )::numeric, 1) AS \"Repeated-message ratio\"\nFROM normalized\nWHERE phrase <> ''\nGROUP BY channel_name\nORDER BY \"Repeated-message ratio\" DESC, \"Channel\"",
+        "refId": "A"
+      }
+    ]
+  },
+  {
+    "id": 57,
+    "title": "Vocabulary Overlap by Channel",
+    "description": "Pairwise channel vocabulary overlap using Jaccard similarity in the selected range.",
+    "type": "table",
+    "gridPos": {
+      "h": 8,
+      "w": 24,
+      "x": 0,
+      "y": 206
+    },
+    "datasource": {
+      "type": "grafana-postgresql-datasource",
+      "uid": "postgres"
+    },
+    "fieldConfig": {
+      "defaults": {
+        "mappings": []
+      },
+      "overrides": []
+    },
+    "options": {
+      "cellHeight": "sm",
+      "footer": {
+        "countRows": false,
+        "fields": "",
+        "reducer": [
+          "sum"
+        ],
+        "show": false
+      },
+      "showHeader": true,
+      "sortBy": [
+        {
+          "desc": true,
+          "displayName": "Vocabulary overlap"
+        }
+      ]
+    },
+    "targets": [
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres"
+        },
+        "editorMode": "code",
+        "format": "table",
+        "rawQuery": true,
+        "rawSql": "WITH selected AS (\n  SELECT channel_name, message\n  FROM twitch_event_chat\n  WHERE $__timeFilter(event_time)\n    AND channel_name IN (${channel:sqlstring})\n), vocabulary AS (\n  SELECT DISTINCT s.channel_name, t.token\n  FROM selected s\n  CROSS JOIN LATERAL regexp_split_to_table(\n    lower(regexp_replace(s.message, '[^[:alnum:]_]+', ' ', 'g')),\n    '[[:space:]]+'\n  ) AS t(token)\n  WHERE LENGTH(t.token) >= 2\n), channel_sizes AS (\n  SELECT channel_name, COUNT(*) AS words\n  FROM vocabulary\n  GROUP BY channel_name\n), channel_pairs AS (\n  SELECT\n    a.channel_name AS channel_a,\n    b.channel_name AS channel_b,\n    a.words AS words_a,\n    b.words AS words_b\n  FROM channel_sizes a\n  CROSS JOIN channel_sizes b\n  WHERE a.channel_name < b.channel_name\n), shared AS (\n  SELECT\n    a.channel_name AS channel_a,\n    b.channel_name AS channel_b,\n    COUNT(*) AS shared_words\n  FROM vocabulary a\n  JOIN vocabulary b\n    ON b.token = a.token\n   AND a.channel_name < b.channel_name\n  GROUP BY a.channel_name, b.channel_name\n)\nSELECT\n  p.channel_a AS \"Channel A\",\n  p.channel_b AS \"Channel B\",\n  COALESCE(s.shared_words, 0) AS \"Shared words\",\n  ROUND((\n    100.0 * COALESCE(s.shared_words, 0)\n    / NULLIF(p.words_a + p.words_b - COALESCE(s.shared_words, 0), 0)\n  )::numeric, 1) AS \"Vocabulary overlap\"\nFROM channel_pairs p\nLEFT JOIN shared s\n  ON s.channel_a = p.channel_a\n AND s.channel_b = p.channel_b\nORDER BY \"Vocabulary overlap\" DESC, \"Channel A\", \"Channel B\"\nLIMIT 100",
+        "refId": "A"
+      }
+    ]
+  }
+]
