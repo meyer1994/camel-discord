@@ -3,7 +3,10 @@ package io.meyer1994.example;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
 
+import org.apache.camel.ProducerTemplate;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
@@ -16,9 +19,11 @@ import reactor.core.publisher.Flux;
 @RestController
 public class ChatController {
     private final TwitchStreamService stream;
+    private final ProducerTemplate producer;
 
-    public ChatController(TwitchStreamService stream) {
+    public ChatController(TwitchStreamService stream, ProducerTemplate producer) {
         this.stream = stream;
+        this.producer = producer;
     }
 
     @GetMapping(path = "/", produces = MediaType.TEXT_HTML_VALUE)
@@ -31,5 +36,24 @@ public class ChatController {
     @GetMapping(path = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> events(@RequestParam("channel") String channel) throws Exception {
         return stream.stream(channel);
+    }
+
+    @GetMapping("/api/stats/messages")
+    public Map<String, Object> messages(@RequestParam("channel") String channel) {
+        return timeSeries("direct:twitch-chat-messages-5min", channel);
+    }
+
+    @GetMapping("/api/stats/chatters")
+    public Map<String, Object> chatters(@RequestParam("channel") String channel) {
+        return timeSeries("direct:twitch-chat-chatters-5min", channel);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> timeSeries(String route, String channel) {
+        List<Map<String, Object>> rows = producer.requestBody(route, channel, List.class);
+        List<Map<String, Object>> points = rows.stream()
+                .map(row -> Map.of("time", row.get("time"), "value", row.get("value")))
+                .toList();
+        return Map.of("points", points);
     }
 }

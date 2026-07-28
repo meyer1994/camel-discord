@@ -22,61 +22,21 @@
   </div>
 
   <main class="mx-auto max-w-7xl p-3 sm:p-4 lg:p-8">
-    <div class="grid gap-4 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
-      <section class="min-w-0 space-y-4 sm:space-y-6">
-        <div class="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-          <div class="stat rounded-box bg-base-100 shadow">
-            <div class="stat-title">Messages / hour</div>
-            <div id="message-total" class="stat-value text-primary">0</div>
-            <div class="stat-desc">Updated every 5 seconds</div>
-          </div>
-          <div class="stat rounded-box bg-base-100 shadow">
-            <div class="stat-title">Peak chatters</div>
-            <div id="chatter-peak" class="stat-value text-secondary">0</div>
-            <div class="stat-desc">Unique users in one minute</div>
-          </div>
-          <div class="stat rounded-box bg-base-100 shadow">
-            <div class="stat-title">Top emoji</div>
-            <div id="top-emoji" class="stat-value">—</div>
-            <div id="top-emoji-count" class="stat-desc">No data yet</div>
-          </div>
-        </div>
-
-        <div class="card bg-base-100 shadow">
-          <div class="card-body gap-3 p-4 sm:p-6">
-            <div class="flex items-center justify-between">
-              <h2 class="card-title">Top chatters</h2>
-              <span class="badge badge-primary badge-outline">Top 10</span>
-            </div>
-            <div id="top-chatters" class="divide-y divide-base-300"></div>
-          </div>
-        </div>
-
-        <div class="card bg-base-100 shadow">
+    <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-6">
+      <section class="grid items-start gap-4 sm:gap-6">
+        <div class="card h-fit w-full self-start bg-base-100 shadow">
           <div class="card-body p-4 sm:p-6">
-            <h2 class="card-title">Messages per minute</h2>
-            <div id="messages-chart" class="h-56 w-full sm:h-72"></div>
+            <h2 class="card-title">Messages per second</h2>
+            <p class="text-sm opacity-60">Last five minutes</p>
+            <div id="messages-chart" class="h-64 w-full flex-none"></div>
           </div>
         </div>
 
-        <div class="card bg-base-100 shadow">
+        <div class="card h-fit w-full self-start bg-base-100 shadow">
           <div class="card-body p-4 sm:p-6">
-            <h2 class="card-title">Unique chatters per minute</h2>
-            <div id="chatters-chart" class="h-56 w-full sm:h-72"></div>
-          </div>
-        </div>
-
-        <div class="card bg-base-100 shadow">
-          <div class="card-body p-4 sm:p-6">
-            <h2 class="card-title">Top emojis</h2>
-            <div id="emojis-chart" class="h-56 w-full sm:h-72"></div>
-          </div>
-        </div>
-
-        <div class="card bg-base-100 shadow">
-          <div class="card-body p-4 sm:p-6">
-            <h2 class="card-title">AI categories</h2>
-            <div id="categories-chart" class="h-56 w-full sm:h-72"></div>
+            <h2 class="card-title">Unique chatters per second</h2>
+            <p class="text-sm opacity-60">Last five minutes</p>
+            <div id="chatters-chart" class="h-64 w-full flex-none"></div>
           </div>
         </div>
       </section>
@@ -101,9 +61,10 @@
 
   <script>
     const channel = "__CHANNEL__";
-    const charts = [];
+    const chartMessages = createChart("messages-chart", "#570df8");
+    const chartChatters = createChart("chatters-chart", "#f000b8");
 
-    function createLineChart(elementId, color) {
+    function createChart(elementId, color) {
       const chart = echarts.init(document.getElementById(elementId));
       chart.setOption({
         animation: false,
@@ -112,7 +73,14 @@
         tooltip: { trigger: "axis" },
         xAxis: {
           type: "time",
-          axisLabel: { hideOverlap: true, color: "#a6adbb" },
+          axisLabel: {
+            hideOverlap: true,
+            color: "#a6adbb",
+            formatter: value => new Date(value).toLocaleTimeString([], {
+              minute: "2-digit",
+              second: "2-digit"
+            })
+          },
           axisLine: { lineStyle: { color: "#334155" } }
         },
         yAxis: {
@@ -131,157 +99,46 @@
           data: []
         }]
       });
-      charts.push(chart);
       return chart;
     }
 
-    const messagesChart = createLineChart("messages-chart", "#570df8");
-    const chattersChart = createLineChart("chatters-chart", "#f000b8");
-    const emojisChart = echarts.init(document.getElementById("emojis-chart"));
-    emojisChart.setOption({
-      animation: false,
-      textStyle: { color: "#a6adbb" },
-      grid: { top: 16, right: 24, bottom: 32, left: 48 },
-      tooltip: { trigger: "axis" },
-      xAxis: {
-        type: "value",
-        minInterval: 1,
-        axisLabel: { color: "#a6adbb" },
-        splitLine: { lineStyle: { color: "#1e293b" } }
-      },
-      yAxis: { type: "category", data: [], axisLabel: { color: "#a6adbb" } },
-      series: [{
-        type: "bar",
-        itemStyle: { color: "#37cdbe", borderRadius: [0, 4, 4, 0] },
-        data: []
-      }]
-    });
-    charts.push(emojisChart);
+    async function refreshMessagesChart() {
+      await refreshChart("/api/stats/messages", chartMessages);
+    }
 
-    const categoriesChart = echarts.init(document.getElementById("categories-chart"));
-    categoriesChart.setOption({
-      animation: false,
-      textStyle: { color: "#a6adbb" },
-      grid: { top: 16, right: 16, bottom: 32, left: 80 },
-      tooltip: { trigger: "axis" },
-      xAxis: {
-        type: "value",
-        minInterval: 1,
-        axisLabel: { color: "#a6adbb" },
-        splitLine: { lineStyle: { color: "#1e293b" } }
-      },
-      yAxis: { type: "category", data: [], axisLabel: { color: "#a6adbb" } },
-      series: [{
-        type: "bar",
-        itemStyle: { color: "#ffab00", borderRadius: [0, 4, 4, 0] },
-        data: []
-      }]
-    });
-    charts.push(categoriesChart);
+    async function refreshChattersChart() {
+      await refreshChart("/api/stats/chatters", chartChatters);
+    }
 
-    async function getJson(path) {
+    async function refreshChart(path, chart) {
       const response = await fetch(`${path}?channel=${encodeURIComponent(channel)}`);
-      return response.json();
-    }
-
-    async function refreshMessages() {
-      const data = await getJson("/api/stats/messages");
-      const points = data.points.map(point => [point.time, point.value]);
-      messagesChart.setOption({ series: [{ data: points }] });
-      document.getElementById("message-total").textContent =
-        points.reduce((total, point) => total + point[1], 0).toLocaleString();
-    }
-
-    async function refreshChatters() {
-      const data = await getJson("/api/stats/chatters");
-      const points = data.points.map(point => [point.time, point.value]);
-      chattersChart.setOption({ series: [{ data: points }] });
-      document.getElementById("chatter-peak").textContent =
-        Math.max(0, ...points.map(point => point[1])).toLocaleString();
-    }
-
-    async function refreshTopChatters() {
-      const data = await getJson("/api/stats/chatters/top");
-      const container = document.getElementById("top-chatters");
-      container.replaceChildren();
-
-      if (!data.items.length) {
-        const empty = document.createElement("p");
-        empty.className = "py-2 text-sm opacity-60";
-        empty.textContent = "No data yet";
-        container.append(empty);
-        return;
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
       }
-
-      data.items.forEach((item, index) => {
-        const row = document.createElement("div");
-        row.className = "flex items-center gap-3 py-2 text-sm";
-
-        const rank = document.createElement("span");
-        rank.className = "w-5 text-center font-mono text-xs opacity-60";
-        rank.textContent = `${index + 1}`;
-
-        const user = document.createElement("span");
-        user.className = "min-w-0 flex-1 truncate font-medium";
-        user.textContent = item.user;
-
-        const count = document.createElement("span");
-        count.className = "font-mono text-xs opacity-70";
-        count.textContent = item.count.toLocaleString();
-
-        row.append(rank, user, count);
-        container.append(row);
-      });
-    }
-
-    async function refreshEmojis() {
-      const data = await getJson("/api/stats/emojis");
-      const items = data.items;
-      emojisChart.setOption({
-        yAxis: { data: items.map(item => item.emoji).reverse() },
-        series: [{ data: items.map(item => item.count).reverse() }]
-      });
-
-      const top = items[0];
-      document.getElementById("top-emoji").textContent = top ? top.emoji : "—";
-      document.getElementById("top-emoji-count").textContent = top
-        ? `${top.count.toLocaleString()} uses in stored messages`
-        : "No data yet";
-    }
-
-    async function refreshCategories() {
-      const data = await getJson("/api/stats/categories");
-      const items = data.items;
-      categoriesChart.setOption({
-        yAxis: { data: items.map(item => item.category).reverse() },
-        series: [{ data: items.map(item => item.count).reverse() }]
+      const data = await response.json();
+      chart.setOption({
+        series: [{ data: data.points.map(point => [point.time, point.value]) }]
       });
     }
 
     function refreshAll() {
-      refreshMessages().catch(console.error);
-      refreshChatters().catch(console.error);
-      refreshTopChatters().catch(console.error);
-      refreshEmojis().catch(console.error);
-      refreshCategories().catch(console.error);
+      refreshMessagesChart().catch(console.error);
+      refreshChattersChart().catch(console.error);
     }
 
     refreshAll();
     setInterval(refreshAll, 5000);
-    window.addEventListener("resize", () => charts.forEach(chart => chart.resize()));
+    window.addEventListener("resize", () => {
+      chartMessages.resize();
+      chartChatters.resize();
+    });
 
-    function scrollChat(event) {
+    document.body.addEventListener("htmx:afterSettle", event => {
       const target = event.detail?.target || event.target;
-      if (target?.id !== "messages") {
-        return;
+      if (target?.id === "messages") {
+        requestAnimationFrame(() => target.scrollTop = target.scrollHeight);
       }
-
-      requestAnimationFrame(() => {
-        target.scrollTop = target.scrollHeight;
-      });
-    }
-
-    document.body.addEventListener("htmx:afterSettle", scrollChat);
+    });
   </script>
 </body>
 </html>

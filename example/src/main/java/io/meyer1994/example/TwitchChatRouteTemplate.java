@@ -57,6 +57,44 @@ public class TwitchChatRouteTemplate extends RouteBuilder {
     }
 
     from("seda:twitch-chat-listener")
-        .log("Published message to SEDA: ${body.messageEvent.messageId}");
+        .log("Published message to SEDA: ${body.messageEvent.messageId}")
+        .bean(TwitchStreamService.class, "publish");
+
+    from("direct:twitch-chat-top-chatters")
+        .to("""
+            sql:
+              SELECT user_name AS username, COUNT(*) as total
+              FROM twitch_event_chat
+              WHERE channel_id = :#${body}
+              GROUP BY user_name
+              ORDER BY total DESC
+              LIMIT 10
+            """);
+
+    from("direct:twitch-chat-messages-5min")
+        .to("""
+            sql:
+              SELECT
+                CAST(EXTRACT(EPOCH FROM DATE_TRUNC('second', event_time)) * 1000 AS BIGINT) AS time,
+                COUNT(*) AS value
+              FROM twitch_event_chat
+              WHERE LOWER(channel_name) = LOWER(:#${body})
+                AND event_time >= NOW() - INTERVAL '5 minutes'
+              GROUP BY time
+              ORDER BY time
+            """);
+
+    from("direct:twitch-chat-chatters-5min")
+        .to("""
+            sql:
+              SELECT
+                CAST(EXTRACT(EPOCH FROM DATE_TRUNC('second', event_time)) * 1000 AS BIGINT) AS time,
+                COUNT(DISTINCT user_id) AS value
+              FROM twitch_event_chat
+              WHERE LOWER(channel_name) = LOWER(:#${body})
+                AND event_time >= NOW() - INTERVAL '5 minutes'
+              GROUP BY time
+              ORDER BY time
+            """);
   }
 }
