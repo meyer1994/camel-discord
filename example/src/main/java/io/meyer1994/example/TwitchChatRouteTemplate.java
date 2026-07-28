@@ -63,9 +63,9 @@ public class TwitchChatRouteTemplate extends RouteBuilder {
     from("direct:twitch-chat-top-chatters")
         .to("""
             sql:
-              SELECT user_name AS username, COUNT(*) as total
+              SELECT COALESCE(user_name, 'anonymous') AS username, COUNT(*) AS total
               FROM twitch_event_chat
-              WHERE channel_id = :#${body}
+              WHERE LOWER(channel_name) = LOWER(:#${body})
               GROUP BY user_name
               ORDER BY total DESC
               LIMIT 10

@@ -39,6 +39,16 @@
             <div id="chatters-chart" class="h-64 w-full flex-none"></div>
           </div>
         </div>
+
+        <div class="card h-fit w-full self-start bg-base-100 shadow">
+          <div class="card-body p-4 sm:p-6">
+            <div class="flex items-center justify-between">
+              <h2 class="card-title">Chat leaderboard</h2>
+              <span class="badge badge-primary badge-outline">Top 10</span>
+            </div>
+            <div id="leaderboard" class="divide-y divide-base-300"></div>
+          </div>
+        </div>
       </section>
 
       <aside class="card h-[28rem] min-h-0 bg-base-100 shadow sm:h-[32rem] lg:sticky lg:top-6 lg:h-[calc(100vh-7rem)] lg:min-h-[32rem]">
@@ -110,6 +120,45 @@
       await refreshChart("/api/stats/chatters", chartChatters);
     }
 
+    async function refreshLeaderboard() {
+      const response = await fetch(`/api/stats/chatters/top?channel=${encodeURIComponent(channel)}`);
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const leaderboard = document.getElementById("leaderboard");
+      leaderboard.replaceChildren();
+
+      if (!data.items.length) {
+        const empty = document.createElement("p");
+        empty.className = "py-2 text-sm opacity-60";
+        empty.textContent = "No data yet";
+        leaderboard.append(empty);
+        return;
+      }
+
+      data.items.forEach((item, index) => {
+        const row = document.createElement("div");
+        row.className = "flex items-center gap-3 py-2 text-sm";
+
+        const rank = document.createElement("span");
+        rank.className = "w-5 text-center font-mono text-xs opacity-60";
+        rank.textContent = index + 1;
+
+        const user = document.createElement("span");
+        user.className = "min-w-0 flex-1 truncate font-medium";
+        user.textContent = item.user;
+
+        const count = document.createElement("span");
+        count.className = "font-mono text-xs opacity-70";
+        count.textContent = Number(item.count).toLocaleString();
+
+        row.append(rank, user, count);
+        leaderboard.append(row);
+      });
+    }
+
     async function refreshChart(path, chart) {
       const response = await fetch(`${path}?channel=${encodeURIComponent(channel)}`);
       if (!response.ok) {
@@ -124,6 +173,7 @@
     function refreshAll() {
       refreshMessagesChart().catch(console.error);
       refreshChattersChart().catch(console.error);
+      refreshLeaderboard().catch(console.error);
     }
 
     refreshAll();

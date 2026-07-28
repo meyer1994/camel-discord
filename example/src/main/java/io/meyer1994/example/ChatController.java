@@ -48,6 +48,16 @@ public class ChatController {
         return timeSeries("direct:twitch-chat-chatters-5min", channel);
     }
 
+    @GetMapping("/api/stats/chatters/top")
+    public Map<String, Object> topChatters(@RequestParam("channel") String channel) {
+        List<Map<String, Object>> rows = producer.requestBody(
+                "direct:twitch-chat-top-chatters", channel, List.class);
+        List<Map<String, Object>> items = rows.stream()
+                .map(row -> Map.of("user", row.get("username"), "count", row.get("total")))
+                .toList();
+        return Map.of("items", items);
+    }
+
     @SuppressWarnings("unchecked")
     private Map<String, Object> timeSeries(String route, String channel) {
         List<Map<String, Object>> rows = producer.requestBody(route, channel, List.class);
