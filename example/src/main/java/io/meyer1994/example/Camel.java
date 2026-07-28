@@ -236,7 +236,7 @@ public class Camel extends RouteBuilder {
         .to("""
             sql:
               SELECT
-                CAST(EXTRACT(EPOCH FROM DATE_TRUNC('second', event_time)) * 1000 AS BIGINT) AS time,
+                CAST(EXTRACT(EPOCH FROM DATE_TRUNC('minute', event_time)) * 1000 AS BIGINT) AS time,
                 COUNT(*) AS value
               FROM twitch_event_chat
               WHERE LOWER(TRIM(user_name)) = LOWER(TRIM(:#${body}))

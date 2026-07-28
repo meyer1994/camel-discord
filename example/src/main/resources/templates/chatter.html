@@ -24,7 +24,7 @@
       <section class="grid min-w-0 gap-4 sm:grid-cols-2">
         <div class="card min-w-0 bg-base-100 shadow">
           <div class="card-body p-4">
-            <h2 class="card-title text-base">Messages per second</h2>
+            <h2 class="card-title text-base">Messages per minute</h2>
             <p class="text-xs opacity-60">Last five minutes</p>
             <div id="timeline-chart" class="h-64 w-full"></div>
           </div>
@@ -89,7 +89,7 @@
 
     const timelineChart = initChart("timeline-chart", {
       grid: { top: 18, right: 16, bottom: 34, left: 44 }, tooltip: { trigger: "axis" },
-      xAxis: { type: "time", axisLabel: { hideOverlap: true, formatter: value => new Date(value).toLocaleTimeString([], { minute: "2-digit", second: "2-digit" }) } },
+      xAxis: { type: "time", axisLabel: { hideOverlap: true, formatter: value => new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) } },
       yAxis: { type: "value", minInterval: 1 }, series: [{ type: "line", smooth: true, showSymbol: false, itemStyle: { color: "#570df8" }, areaStyle: { opacity: 0.15 }, data: [] }]
     });
     const channelsChart = initChart("channels-chart", { grid: { top: 16, right: 16, bottom: 24, left: 72 }, xAxis: { type: "value", minInterval: 1 }, yAxis: { type: "category", data: [] }, series: [{ type: "bar", itemStyle: { color: "#37cdbe" }, data: [] }] });
