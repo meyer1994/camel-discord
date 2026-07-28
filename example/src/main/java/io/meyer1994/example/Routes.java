@@ -68,13 +68,13 @@ public class Routes {
     @ResponseBody
     @GetMapping("/api/stats/messages/hour")
     public List<Map<String, Object>> messagesLastHour(@RequestParam("channel") String channel) {
-        return rows("direct:twitch-chat-messages-1h", channel);
+        return rowsMinute("direct:twitch-chat-messages-1h", channel);
     }
 
     @ResponseBody
     @GetMapping("/api/stats/messages/total")
     public List<Map<String, Object>> totalMessages(@RequestParam("channel") String channel) {
-        return rows("direct:twitch-chat-message-count", channel);
+        return rowsMinute("direct:twitch-chat-message-count", channel);
     }
 
     @ResponseBody
@@ -151,5 +151,9 @@ public class Routes {
 
     private List<Map<String, Object>> rows(String route, String value) {
         return stats.rows(route, value);
+    }
+
+    private List<Map<String, Object>> rowsMinute(String route, String value) {
+        return stats.rowsMinute(route, value);
     }
 }

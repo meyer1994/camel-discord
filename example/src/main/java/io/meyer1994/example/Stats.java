@@ -20,4 +20,10 @@ public class Stats {
     public List<Map<String, Object>> rows(String route, String value) {
         return producer.requestBody(route, value, List.class);
     }
+
+    @Cacheable(cacheNames = "stats-minute", key = "{#route, #value}", sync = true)
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> rowsMinute(String route, String value) {
+        return producer.requestBody(route, value, List.class);
+    }
 }

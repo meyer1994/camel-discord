@@ -40,6 +40,10 @@ public class App {
                 .expireAfterWrite(3, TimeUnit.SECONDS)
                 .maximumSize(1024)
                 .build());
+        cacheManager.registerCustomCache("stats-minute", Caffeine.newBuilder()
+                .expireAfterWrite(1, TimeUnit.MINUTES)
+                .maximumSize(1024)
+                .build());
         return cacheManager;
     }
 
