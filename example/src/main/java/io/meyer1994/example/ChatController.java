@@ -59,7 +59,7 @@ public class ChatController {
     public Map<String, Object> totalMessages(@RequestParam("channel") String channel) {
         List<Map<String, Object>> rows = producer.requestBody(
                 "direct:twitch-chat-message-count", channel, List.class);
-        return Map.of("total", rows.isEmpty() ? 0 : rows.getFirst().get("total"));
+        return Map.of("total", rows.isEmpty() ? 0 : column(rows.getFirst(), "total"));
     }
 
     @ResponseBody
@@ -86,5 +86,13 @@ public class ChatController {
                 .map(row -> Map.of("time", row.get("time"), "value", row.get("value")))
                 .toList();
         return Map.of("points", points);
+    }
+
+    private Object column(Map<String, Object> row, String name) {
+        return row.entrySet().stream()
+                .filter(entry -> entry.getKey().equalsIgnoreCase(name))
+                .map(Map.Entry::getValue)
+                .findFirst()
+                .orElse(0L);
     }
 }

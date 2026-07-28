@@ -65,7 +65,7 @@ public class TwitchChatRouteTemplate extends RouteBuilder {
             sql:
               SELECT COALESCE(user_name, 'anonymous') AS username, COUNT(*) AS total
               FROM twitch_event_chat
-              WHERE LOWER(channel_name) = LOWER(:#${body})
+              WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
               GROUP BY user_name
               ORDER BY total DESC
               LIMIT 10
@@ -78,7 +78,7 @@ public class TwitchChatRouteTemplate extends RouteBuilder {
                 CAST(EXTRACT(EPOCH FROM DATE_TRUNC('second', event_time)) * 1000 AS BIGINT) AS time,
                 COUNT(*) AS value
               FROM twitch_event_chat
-              WHERE LOWER(channel_name) = LOWER(:#${body})
+              WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
                 AND event_time >= NOW() - INTERVAL '5 minutes'
               GROUP BY time
               ORDER BY time
@@ -89,7 +89,7 @@ public class TwitchChatRouteTemplate extends RouteBuilder {
             sql:
               SELECT COUNT(*) AS total
               FROM twitch_event_chat
-              WHERE LOWER(channel_name) = LOWER(:#${body})
+              WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
             """);
 
     from("direct:twitch-chat-velocity-5min")
@@ -100,7 +100,7 @@ public class TwitchChatRouteTemplate extends RouteBuilder {
                   DATE_TRUNC('second', event_time) AS second,
                   COUNT(*) AS messages
                 FROM twitch_event_chat
-                WHERE LOWER(channel_name) = LOWER(:#${body})
+                WHERE LOWER(TRIM(channel_name)) = LOWER(TRIM(:#${body}))
                   AND event_time >= NOW() - INTERVAL '5 minutes'
                 GROUP BY second
               )
