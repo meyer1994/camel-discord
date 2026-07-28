@@ -3,7 +3,6 @@ package io.meyer1994.example;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.camel.ProducerTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
@@ -18,15 +17,15 @@ import reactor.core.publisher.Flux;
 @Controller
 public class Routes {
     private final Twitch stream;
-    private final ProducerTemplate producer;
+    private final Stats stats;
     private final List<String> channels;
 
     public Routes(
             Twitch stream,
-            ProducerTemplate producer,
+            Stats stats,
             @Value("${app.twitch.channels}") List<String> channels) {
         this.stream = stream;
-        this.producer = producer;
+        this.stats = stats;
         this.channels = channels;
     }
 
@@ -150,8 +149,7 @@ public class Routes {
         return rows("direct:twitch-chatter-activity-by-hour", chatter);
     }
 
-    @SuppressWarnings("unchecked")
     private List<Map<String, Object>> rows(String route, String value) {
-        return producer.requestBody(route, value, List.class);
+        return stats.rows(route, value);
     }
 }
