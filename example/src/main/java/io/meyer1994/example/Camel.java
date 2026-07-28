@@ -258,5 +258,17 @@ public class Camel extends RouteBuilder {
               GROUP BY subscription_tier
               ORDER BY subscription_tier
             """);
+
+    from("direct:twitch-chatter-activity-by-hour")
+        .to("""
+            sql:
+              SELECT
+                EXTRACT(HOUR FROM event_time)::INTEGER AS hour,
+                COUNT(*) AS count
+              FROM twitch_event_chat
+              WHERE LOWER(TRIM(user_name)) = LOWER(TRIM(:#${body}))
+              GROUP BY hour
+              ORDER BY hour
+            """);
   }
 }
