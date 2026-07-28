@@ -34,9 +34,9 @@
 
         <div class="card h-fit w-full self-start bg-base-100 shadow">
           <div class="card-body p-4 sm:p-6">
-            <h2 class="card-title">Unique chatters per second</h2>
-            <p class="text-sm opacity-60">Last five minutes</p>
-            <div id="chatters-chart" class="h-64 w-full flex-none"></div>
+            <h2 class="card-title">Chat velocity</h2>
+            <p class="text-sm opacity-60">10-second rolling average</p>
+            <div id="velocity-chart" class="h-64 w-full flex-none"></div>
           </div>
         </div>
 
@@ -72,7 +72,7 @@
   <script>
     const channel = "__CHANNEL__";
     const chartMessages = createChart("messages-chart", "#570df8");
-    const chartChatters = createChart("chatters-chart", "#f000b8");
+    const chartVelocity = createChart("velocity-chart", "#f000b8");
 
     function createChart(elementId, color) {
       const chart = echarts.init(document.getElementById(elementId));
@@ -116,8 +116,8 @@
       await refreshChart("/api/stats/messages", chartMessages);
     }
 
-    async function refreshChattersChart() {
-      await refreshChart("/api/stats/chatters", chartChatters);
+    async function refreshVelocityChart() {
+      await refreshChart("/api/stats/velocity", chartVelocity);
     }
 
     async function refreshLeaderboard() {
@@ -172,7 +172,7 @@
 
     function refreshAll() {
       refreshMessagesChart().catch(console.error);
-      refreshChattersChart().catch(console.error);
+      refreshVelocityChart().catch(console.error);
       refreshLeaderboard().catch(console.error);
     }
 
@@ -180,7 +180,7 @@
     setInterval(refreshAll, 5000);
     window.addEventListener("resize", () => {
       chartMessages.resize();
-      chartChatters.resize();
+      chartVelocity.resize();
     });
 
     document.body.addEventListener("htmx:afterSettle", event => {

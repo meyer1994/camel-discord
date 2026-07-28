@@ -43,9 +43,9 @@ public class ChatController {
         return timeSeries("direct:twitch-chat-messages-5min", channel);
     }
 
-    @GetMapping("/api/stats/chatters")
-    public Map<String, Object> chatters(@RequestParam("channel") String channel) {
-        return timeSeries("direct:twitch-chat-chatters-5min", channel);
+    @GetMapping("/api/stats/velocity")
+    public Map<String, Object> velocity(@RequestParam("channel") String channel) {
+        return timeSeries("direct:twitch-chat-velocity-5min", channel);
     }
 
     @GetMapping("/api/stats/chatters/top")
