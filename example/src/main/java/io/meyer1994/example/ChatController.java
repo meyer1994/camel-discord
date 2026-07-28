@@ -3,15 +3,7 @@ package io.meyer1994.example;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
-import org.apache.camel.ProducerTemplate;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
@@ -23,12 +15,10 @@ import reactor.core.publisher.Flux;
 
 @RestController
 public class ChatController {
-    private final TwitchStreamService streamService;
-    private final ProducerTemplate producerTemplate;
+    private final TwitchStreamService stream;
 
-    public ChatController(TwitchStreamService streamService, ProducerTemplate producerTemplate) {
-        this.streamService = streamService;
-        this.producerTemplate = producerTemplate;
+    public ChatController(TwitchStreamService stream) {
+        this.stream = stream;
     }
 
     @GetMapping(path = "/", produces = MediaType.TEXT_HTML_VALUE)
@@ -40,87 +30,6 @@ public class ChatController {
 
     @GetMapping(path = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> events(@RequestParam("channel") String channel) throws Exception {
-        return streamService.stream(channel);
-    }
-
-    @GetMapping(path = "/emoji-counts", produces = MediaType.APPLICATION_JSON_VALUE)
-    @SuppressWarnings("unchecked")
-    public Map<String, Long> emojiCounts(@RequestParam("channel") String channel) {
-        return producerTemplate.requestBodyAndHeader(
-                "direct:emojiCounts", null, "channel", channel, Map.class);
-    }
-
-    @GetMapping(path = "/api/stats/messages", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Map<String, Object> messageStats(@RequestParam("channel") String channel) {
-        return Map.of("points", timeSeries("direct:messageStats", channel));
-    }
-
-    @GetMapping(path = "/api/stats/chatters", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Map<String, Object> chatterStats(@RequestParam("channel") String channel) {
-        return Map.of("points", timeSeries("direct:chatterStats", channel));
-    }
-
-    @GetMapping(path = "/api/stats/chatters/top", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Map<String, Object> topChatters(@RequestParam("channel") String channel) {
-        return Map.of("items", topChatterRows(channel).stream()
-                .map(row -> Map.of(
-                        "user", row.get("USER_NAME"),
-                        "count", ((Number) row.get("AMOUNT")).longValue()))
-                .toList());
-    }
-
-    @GetMapping(path = "/api/stats/emojis", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Map<String, Object> emojiStats(@RequestParam("channel") String channel) {
-        return Map.of("items", emojiCounts(channel).entrySet().stream()
-                .limit(8)
-                .map(entry -> Map.of("emoji", entry.getKey(), "count", entry.getValue()))
-                .toList());
-    }
-
-    @GetMapping(path = "/api/stats/categories", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Map<String, Object> categoryStats(@RequestParam("channel") String channel) {
-        return Map.of("items", categoryRows(channel).stream()
-                .map(row -> Map.of(
-                        "category", row.get("CATEGORY"),
-                        "count", ((Number) row.get("AMOUNT")).longValue()))
-                .toList());
-    }
-
-    @SuppressWarnings("unchecked")
-    private List<Map<String, Object>> categoryRows(String channel) {
-        return producerTemplate.requestBodyAndHeader(
-                "direct:aiCategoryCounts", null, "channel", channel, List.class);
-    }
-
-    @SuppressWarnings("unchecked")
-    private List<Map<String, Object>> topChatterRows(String channel) {
-        return producerTemplate.requestBodyAndHeader(
-                "direct:topChatters", null, "channel", channel, List.class);
-    }
-
-    @SuppressWarnings("unchecked")
-    private List<Map<String, Object>> timeSeries(String route, String channel) {
-        List<Map<String, Object>> rows = producerTemplate.requestBodyAndHeader(
-                route, null, "channel", channel, List.class);
-        Map<LocalDateTime, Long> values = new HashMap<>();
-
-        for (Map<String, Object> row : rows) {
-            Timestamp bucket = (Timestamp) row.get("BUCKET");
-            Number amount = (Number) row.get("AMOUNT");
-            values.put(bucket.toLocalDateTime(), amount.longValue());
-        }
-
-        LocalDateTime end = LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES);
-        LocalDateTime start = end.minusMinutes(59);
-        List<Map<String, Object>> points = new ArrayList<>();
-
-        for (int minute = 0; minute < 60; minute++) {
-            LocalDateTime bucket = start.plusMinutes(minute);
-            points.add(Map.of(
-                    "time", bucket.toString(),
-                    "value", values.getOrDefault(bucket, 0L)));
-        }
-
-        return points;
+        return stream.stream(channel);
     }
 }

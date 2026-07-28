@@ -4,6 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.web.reactive.config.CorsRegistry;
 import org.springframework.web.reactive.config.WebFluxConfigurer;
@@ -11,6 +12,7 @@ import org.springframework.web.reactive.config.WebFluxConfigurer;
 import com.github.twitch4j.ITwitchClient;
 import com.github.twitch4j.TwitchClientBuilder;
 
+@Configuration
 @SpringBootApplication
 public class App {
     public static void main(String[] args) {
@@ -23,6 +25,7 @@ public class App {
     ITwitchClient twitchClient() {
         return TwitchClientBuilder.builder()
                 .withEnableChat(true)
+                .withEnableHelix(true)
                 .withChatAutoJoinOwnChannel(false)
                 .build();
     }
@@ -38,5 +41,4 @@ public class App {
             }
         };
     }
-
 }
