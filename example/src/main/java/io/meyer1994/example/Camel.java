@@ -132,11 +132,11 @@ public class Camel extends RouteBuilder {
                 CAST('{}' AS jsonb)
               )
             """)
-        .log("Inserted kick message: ${body.id}");
+        .log("Inserted kick message: ${headers['x-camel-kick-channel-name']} ${body.id}");
 
     from("seda:kick-chat-listener")
         .bean(Kick.class, "publish")
-        .log("Published kick message to SEDA: ${body.id}");
+        .log("Published kick message to SEDA: ${headers['x-camel-kick-channel-name']} ${body.id}");
 
     from("seda:twitch-chat-listener")
         .bean(Twitch.class, "publish")
