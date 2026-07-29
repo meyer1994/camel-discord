@@ -159,11 +159,11 @@ public class Camel extends RouteBuilder {
                   WHEN LENGTH(message) < 100 THEN '50-99'
                   WHEN LENGTH(message) < 200 THEN '100-199'
                   ELSE '200+'
-                END AS bucket,
-                COUNT(*) AS count
+                END AS label,
+                COUNT(*) AS value
               FROM twitch_event_chat
               WHERE channel_name = :#${body}
-              GROUP BY bucket
+              GROUP BY label
               ORDER BY MIN(LENGTH(message))
             """);
 
@@ -187,12 +187,18 @@ public class Camel extends RouteBuilder {
         .to("""
             sql:
               SELECT
-                subscription_tier AS tier,
-                COUNT(*) AS count
+                CASE COALESCE(subscription_tier, 0)
+                  WHEN 0 THEN 'Non-subscriber'
+                  WHEN 1 THEN 'Tier 1'
+                  WHEN 2 THEN 'Tier 2'
+                  WHEN 3 THEN 'Tier 3'
+                  ELSE 'Tier ' || COALESCE(subscription_tier, 0)::TEXT
+                END AS label,
+                COUNT(*) AS value
               FROM twitch_event_chat
               WHERE channel_name = :#${body}
-              GROUP BY subscription_tier
-              ORDER BY subscription_tier
+              GROUP BY COALESCE(subscription_tier, 0)
+              ORDER BY COALESCE(subscription_tier, 0)
             """);
 
     from("direct:twitch-chat-activity-by-hour")
@@ -255,22 +261,30 @@ public class Camel extends RouteBuilder {
                   WHEN LENGTH(message) < 100 THEN '50-99'
                   WHEN LENGTH(message) < 200 THEN '100-199'
                   ELSE '200+'
-                END AS bucket,
-                COUNT(*) AS count
+                END AS label,
+                COUNT(*) AS value
               FROM twitch_event_chat
               WHERE user_name = :#${body}
-              GROUP BY bucket
+              GROUP BY label
               ORDER BY MIN(LENGTH(message))
             """);
 
     from("direct:twitch-chatter-tiers")
         .to("""
             sql:
-              SELECT subscription_tier AS tier, COUNT(*) AS count
+              SELECT
+                CASE COALESCE(subscription_tier, 0)
+                  WHEN 0 THEN 'Non-subscriber'
+                  WHEN 1 THEN 'Tier 1'
+                  WHEN 2 THEN 'Tier 2'
+                  WHEN 3 THEN 'Tier 3'
+                  ELSE 'Tier ' || COALESCE(subscription_tier, 0)::TEXT
+                END AS label,
+                COUNT(*) AS value
               FROM twitch_event_chat
               WHERE user_name = :#${body}
-              GROUP BY subscription_tier
-              ORDER BY subscription_tier
+              GROUP BY COALESCE(subscription_tier, 0)
+              ORDER BY COALESCE(subscription_tier, 0)
             """);
 
     from("direct:twitch-chatter-activity-by-hour")

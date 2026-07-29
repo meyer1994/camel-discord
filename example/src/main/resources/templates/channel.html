@@ -111,16 +111,16 @@
     async function refreshLengthsChart() {
       const data = await fetchStats("/api/stats/messages/length");
       chartLengths.setOption({ 
-        xAxis: { type: "category", data: data.map(item => item.label ?? item.length ?? item.bucket) }, 
+        xAxis: { type: "category", data: data.map(item => item.label) },
         series: [{ type: "bar", itemStyle: { color: "#fbbd23" }, 
-        data: data.map(item => item.value ?? item.count ?? 0) 
+        data: data.map(item => item.value ?? 0)
         }] 
       });
     }
 
     async function refreshTiersChart() {
       const data = await fetchStats("/api/stats/subscribers/tiers");
-      chartTiers.setOption({ tooltip: { trigger: "item" }, legend: { bottom: 0, textStyle: { color: "#a6adbb" } }, series: [{ type: "pie", radius: ["35%", "68%"], itemStyle: { borderRadius: 5, borderColor: "#1d232a", borderWidth: 2 }, data: data.map(item => ({ name: item.label ?? item.tier ?? "Unknown", value: item.value ?? item.count ?? 0 })) }] });
+      chartTiers.setOption({ tooltip: { trigger: "item" }, legend: { bottom: 0, textStyle: { color: "#a6adbb" } }, series: [{ type: "pie", radius: ["35%", "68%"], itemStyle: { borderRadius: 5, borderColor: "#1d232a", borderWidth: 2 }, data: data.map(item => ({ name: item.label, value: item.value ?? 0 })) }] });
     }
 
     async function refreshActivityByHourChart() {
