@@ -15,13 +15,13 @@ public class Stats {
         this.producer = producer;
     }
 
-    @Cacheable(cacheNames = "stats", key = "{#route, #value}", sync = true)
+    @Cacheable(cacheNames = "stats", key = "{#p0, #p1}", sync = true)
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> rows(String route, String value) {
         return producer.requestBody(route, value, List.class);
     }
 
-    @Cacheable(cacheNames = "stats-minute", key = "{#route, #value}", sync = true)
+    @Cacheable(cacheNames = "stats-minute", key = "{#p0, #p1}", sync = true)
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> rowsMinute(String route, String value) {
         return producer.requestBody(route, value, List.class);
