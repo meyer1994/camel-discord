@@ -228,13 +228,13 @@ public class Camel extends RouteBuilder {
                 ORDER BY score DESC
               )
 
-              SELECT platform, channel, user, message, created_at, score
+              SELECT platform, channel, chat_matches.user as user, message, created_at, score
               FROM (
                 SELECT * FROM twitch_matches
                 UNION ALL
                 SELECT * FROM kick_matches
               ) AS chat_matches
-              ORDER BY score DESC, platform, channel, user, message
+              ORDER BY score DESC, platform, channel, chat_matches.user, message
               LIMIT 20
             """);
 
