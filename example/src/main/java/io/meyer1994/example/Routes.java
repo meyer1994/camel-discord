@@ -4,6 +4,9 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.camel.Produce;
+import org.apache.camel.ProducerTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
@@ -21,6 +24,10 @@ public class Routes {
     private final Kick kick;
     private final Stats stats;
     private final List<String> channels;
+
+    @Autowired
+    @Produce("direct:chat-search")
+    private ProducerTemplate producer;
 
     public Routes(
             Twitch twitch,
@@ -81,6 +88,16 @@ public class Routes {
     @GetMapping("/api/stats/messages/total")
     public List<Map<String, Object>> totalMessages(@RequestParam("channel") String channel) {
         return rowsMinute("direct:twitch-chat-message-count", channel);
+    }
+
+    @GetMapping(path = "/api/chat/search", produces = MediaType.TEXT_HTML_VALUE)
+    public String chatSearch(@RequestParam("query") String query, @RequestParam("channel") String channel,
+            Model model) {
+        Map<String, String> body = Map.of("channel", channel, "query", query);
+        Object matches = producer.requestBody(body);
+        model.addAttribute("channel", channel);
+        model.addAttribute("matches", matches);
+        return "channel :: chat-search-results";
     }
 
     @ResponseBody

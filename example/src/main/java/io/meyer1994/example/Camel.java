@@ -195,6 +195,49 @@ public class Camel extends RouteBuilder {
               WHERE channel_name = :#${body}
             """);
 
+    from("direct:chat-search")
+        .to("""
+            sql:
+              WITH twitch_matches AS (
+                SELECT
+                  'Twitch' AS platform,
+                  channel_name AS channel,
+                  user_name AS user,
+                  message AS message,
+                  created_at AS created_at,
+                  similarity(message, :#${body[query]}) AS score
+                FROM twitch_event_chat
+                WHERE
+                  channel_name = :#${body[channel]}
+                  AND event_time >= NOW() - INTERVAL '1 hour'
+                ORDER BY score DESC
+              ),
+
+              kick_matches AS (
+                SELECT
+                  'Kick' AS platform,
+                  channel_name AS channel,
+                  user_name AS user,
+                  message AS message,
+                  created_at AS created_at,
+                  similarity(message, :#${body[query]}) AS score
+                FROM kick_event_chat
+                WHERE
+                  channel_name = :#${body[channel]}
+                  AND event_time >= NOW() - INTERVAL '1 hour'
+                ORDER BY score DESC
+              )
+
+              SELECT platform, channel, user, message, created_at, score
+              FROM (
+                SELECT * FROM twitch_matches
+                UNION ALL
+                SELECT * FROM kick_matches
+              ) AS chat_matches
+              ORDER BY score DESC, platform, channel, user, message
+              LIMIT 20
+            """);
+
     from("direct:twitch-chat-velocity-5min")
         .to("""
             sql:
