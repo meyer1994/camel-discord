@@ -1,0 +1,818 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Concurrent Chatters",
+      "description": "Distinct chatters who posted in different selected channels within the overlap window.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH scoped AS (\n  SELECT\n    event_time,\n    channel_name,\n    COALESCE(NULLIF(user_id, ''), 'name:' || LOWER(NULLIF(user_name, ''))) AS chatter_key\n  FROM twitch_event_chat\n  WHERE $__timeFilter(event_time)\n    AND channel_name IN (${channel:sqlstring})\n    AND COALESCE(NULLIF(user_id, ''), NULLIF(user_name, '')) IS NOT NULL\n), concurrent AS (\n  SELECT DISTINCT a.chatter_key\n  FROM scoped a\n  JOIN scoped b\n    ON b.chatter_key = a.chatter_key\n   AND b.channel_name <> a.channel_name\n   AND b.event_time >= a.event_time\n   AND b.event_time <= a.event_time + INTERVAL '${overlap_minutes} minutes'\n)\nSELECT COUNT(*) AS \"Concurrent chatters\"\nFROM concurrent",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Concurrency Rate",
+      "description": "Percentage of active selected-scope chatters who crossed into another channel within the overlap window.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 25
+              },
+              {
+                "color": "red",
+                "value": 60
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH scoped AS (\n  SELECT\n    event_time,\n    channel_name,\n    COALESCE(NULLIF(user_id, ''), 'name:' || LOWER(NULLIF(user_name, ''))) AS chatter_key\n  FROM twitch_event_chat\n  WHERE $__timeFilter(event_time)\n    AND channel_name IN (${channel:sqlstring})\n    AND COALESCE(NULLIF(user_id, ''), NULLIF(user_name, '')) IS NOT NULL\n), all_chatters AS (\n  SELECT DISTINCT chatter_key FROM scoped\n), concurrent AS (\n  SELECT DISTINCT a.chatter_key\n  FROM scoped a\n  JOIN scoped b\n    ON b.chatter_key = a.chatter_key\n   AND b.channel_name <> a.channel_name\n   AND b.event_time >= a.event_time\n   AND b.event_time <= a.event_time + INTERVAL '${overlap_minutes} minutes'\n)\nSELECT ROUND((100.0 * COUNT(concurrent.chatter_key) / NULLIF(COUNT(all_chatters.chatter_key), 0))::numeric, 1) AS \"Concurrency rate\"\nFROM all_chatters\nLEFT JOIN concurrent USING (chatter_key)",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Peak Concurrent Chatters",
+      "description": "Highest count of distinct concurrent chatters in any Grafana time bucket.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH scoped AS (\n  SELECT id, event_time, channel_name, COALESCE(NULLIF(user_id, ''), 'name:' || LOWER(NULLIF(user_name, ''))) AS chatter_key\n  FROM twitch_event_chat\n  WHERE $__timeFilter(event_time)\n    AND channel_name IN (${channel:sqlstring})\n    AND COALESCE(NULLIF(user_id, ''), NULLIF(user_name, '')) IS NOT NULL\n), overlap_events AS (\n  SELECT DISTINCT a.chatter_key, LEAST(a.event_time, b.event_time) AS overlap_time\n  FROM scoped a\n  JOIN scoped b\n    ON b.chatter_key = a.chatter_key\n   AND b.channel_name <> a.channel_name\n   AND (b.event_time, b.id) > (a.event_time, a.id)\n   AND b.event_time <= a.event_time + INTERVAL '${overlap_minutes} minutes'\n), bucketed AS (\n  SELECT $__timeGroup(overlap_time, $__interval) AS bucket, COUNT(DISTINCT chatter_key) AS concurrent_chatters\n  FROM overlap_events\n  GROUP BY 1\n)\nSELECT COALESCE(MAX(concurrent_chatters), 0) AS \"Peak concurrent chatters\"\nFROM bucketed",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Average Channels per Concurrent Chatter",
+      "description": "Mean number of selected channels touched by each chatter with at least one concurrent overlap.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 2
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH scoped AS (\n  SELECT event_time, channel_name, COALESCE(NULLIF(user_id, ''), 'name:' || LOWER(NULLIF(user_name, ''))) AS chatter_key\n  FROM twitch_event_chat\n  WHERE $__timeFilter(event_time)\n    AND channel_name IN (${channel:sqlstring})\n    AND COALESCE(NULLIF(user_id, ''), NULLIF(user_name, '')) IS NOT NULL\n), concurrent AS (\n  SELECT DISTINCT a.chatter_key\n  FROM scoped a\n  JOIN scoped b\n    ON b.chatter_key = a.chatter_key\n   AND b.channel_name <> a.channel_name\n   AND b.event_time >= a.event_time\n   AND b.event_time <= a.event_time + INTERVAL '${overlap_minutes} minutes'\n), channel_counts AS (\n  SELECT chatter_key, COUNT(DISTINCT channel_name) AS channels\n  FROM scoped\n  WHERE chatter_key IN (SELECT chatter_key FROM concurrent)\n  GROUP BY chatter_key\n)\nSELECT ROUND(AVG(channels)::numeric, 2) AS \"Average channels\"\nFROM channel_counts",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "table",
+      "title": "Channel-Pair Overlap Matrix",
+      "description": "Symmetric channel-pair view of distinct chatters who were active in both channels within the overlap window.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto"
+          },
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "enablePagination": true,
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Concurrent chatters",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH scoped AS (\n  SELECT id, event_time, channel_name, COALESCE(NULLIF(user_id, ''), 'name:' || LOWER(NULLIF(user_name, ''))) AS chatter_key\n  FROM twitch_event_chat\n  WHERE $__timeFilter(event_time)\n    AND channel_name IN (${channel:sqlstring})\n    AND COALESCE(NULLIF(user_id, ''), NULLIF(user_name, '')) IS NOT NULL\n), pairs AS (\n  SELECT DISTINCT a.chatter_key, LEAST(a.channel_name, b.channel_name) AS channel_a, GREATEST(a.channel_name, b.channel_name) AS channel_b\n  FROM scoped a\n  JOIN scoped b\n    ON b.chatter_key = a.chatter_key\n   AND b.channel_name <> a.channel_name\n   AND (b.event_time, b.id) > (a.event_time, a.id)\n   AND b.event_time <= a.event_time + INTERVAL '${overlap_minutes} minutes'\n), audience AS (\n  SELECT channel_name, COUNT(DISTINCT chatter_key) AS audience\n  FROM scoped\n  GROUP BY channel_name\n), pair_counts AS (\n  SELECT channel_a, channel_b, COUNT(*) AS concurrent_chatters\n  FROM pairs\n  GROUP BY channel_a, channel_b\n)\nSELECT\n  channel_a AS \"Channel A\",\n  channel_b AS \"Channel B\",\n  concurrent_chatters AS \"Concurrent chatters\",\n  ROUND((100.0 * concurrent_chatters / NULLIF(LEAST(audience_a.audience, audience_b.audience), 0))::numeric, 1) AS \"Overlap of smaller audience %\",\n  ROUND((100.0 * concurrent_chatters / NULLIF(audience_a.audience + audience_b.audience - concurrent_chatters, 0))::numeric, 1) AS \"Jaccard %\"\nFROM pair_counts\nJOIN audience audience_a ON audience_a.channel_name = channel_a\nJOIN audience audience_b ON audience_b.channel_name = channel_b\nORDER BY concurrent_chatters DESC, channel_a, channel_b\nLIMIT 100",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "nodeGraph",
+      "title": "Concurrent-Audience Network",
+      "description": "Channel nodes connected by users who were active in both channels within the overlap window.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-BlPu"
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "edges": {},
+        "nodes": {}
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH scoped AS (\n  SELECT id, event_time, channel_name, COALESCE(NULLIF(user_id, ''), 'name:' || LOWER(NULLIF(user_name, ''))) AS chatter_key\n  FROM twitch_event_chat\n  WHERE $__timeFilter(event_time)\n    AND channel_name IN (${channel:sqlstring})\n    AND COALESCE(NULLIF(user_id, ''), NULLIF(user_name, '')) IS NOT NULL\n), pairs AS (\n  SELECT DISTINCT a.chatter_key, LEAST(a.channel_name, b.channel_name) AS source, GREATEST(a.channel_name, b.channel_name) AS target\n  FROM scoped a\n  JOIN scoped b\n    ON b.chatter_key = a.chatter_key\n   AND b.channel_name <> a.channel_name\n   AND (b.event_time, b.id) > (a.event_time, a.id)\n   AND b.event_time <= a.event_time + INTERVAL '${overlap_minutes} minutes'\n), pair_counts AS (\n  SELECT source, target, COUNT(*) AS shared_chatters\n  FROM pairs\n  GROUP BY source, target\n), audience AS (\n  SELECT channel_name, COUNT(DISTINCT chatter_key) AS audience\n  FROM scoped\n  GROUP BY channel_name\n)\nSELECT\n  source || ' -> ' || target AS id,\n  source,\n  target,\n  shared_chatters::text || ' concurrent' AS \"mainStat\",\n  ROUND((100.0 * shared_chatters / NULLIF(audience_a.audience + audience_b.audience - shared_chatters, 0))::numeric, 1)::text || '%' AS \"secondaryStat\",\n  ROUND((1.0 + 9.0 * shared_chatters / NULLIF(LEAST(audience_a.audience, audience_b.audience), 0))::numeric, 2) AS thickness\nFROM pair_counts\nJOIN audience audience_a ON audience_a.channel_name = source\nJOIN audience audience_b ON audience_b.channel_name = target\nORDER BY shared_chatters DESC, source, target\nLIMIT 100",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "barchart",
+      "title": "Channel Concurrency Fingerprint",
+      "description": "For each channel, classify active chatters as solo-only, two-channel, or three-plus-channel participants based on observed concurrent overlaps.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 0,
+        "y": 13
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "showValue": "always",
+        "stacking": "normal",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH scoped AS (\n  SELECT event_time, channel_name, COALESCE(NULLIF(user_id, ''), 'name:' || LOWER(NULLIF(user_name, ''))) AS chatter_key\n  FROM twitch_event_chat\n  WHERE $__timeFilter(event_time)\n    AND channel_name IN (${channel:sqlstring})\n    AND COALESCE(NULLIF(user_id, ''), NULLIF(user_name, '')) IS NOT NULL\n), active_memberships AS (\n  SELECT DISTINCT chatter_key, channel_name FROM scoped\n), concurrent_memberships AS (\n  SELECT DISTINCT a.chatter_key, a.channel_name\n  FROM scoped a\n  WHERE EXISTS (\n    SELECT 1\n    FROM scoped b\n    WHERE b.chatter_key = a.chatter_key\n      AND b.channel_name <> a.channel_name\n      AND b.event_time BETWEEN a.event_time - INTERVAL '${overlap_minutes} minutes'\n                           AND a.event_time + INTERVAL '${overlap_minutes} minutes'\n  )\n), concurrent_degrees AS (\n  SELECT chatter_key, COUNT(*) AS concurrent_channels\n  FROM concurrent_memberships\n  GROUP BY chatter_key\n)\nSELECT\n  active_memberships.channel_name AS \"Channel\",\n  CASE\n    WHEN concurrent_degrees.chatter_key IS NULL THEN 'Solo only'\n    WHEN concurrent_degrees.concurrent_channels = 2 THEN 'Two-channel'\n    ELSE 'Three+ channels'\n  END AS \"Concurrency mode\",\n  COUNT(*) AS \"Chatters\"\nFROM active_memberships\nLEFT JOIN concurrent_degrees USING (chatter_key)\nGROUP BY active_memberships.channel_name, 2\nORDER BY active_memberships.channel_name, 2",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Bridge-Chatters",
+      "description": "Chatters who create concurrent links between the most channel pairs.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 8,
+        "y": 13
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto"
+          },
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Connected pairs",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH scoped AS (\n  SELECT id, event_time, channel_name, COALESCE(NULLIF(user_id, ''), 'name:' || LOWER(NULLIF(user_name, ''))) AS chatter_key, COALESCE(NULLIF(display_name, ''), NULLIF(user_name, ''), NULLIF(user_id, '')) AS chatter\n  FROM twitch_event_chat\n  WHERE $__timeFilter(event_time)\n    AND channel_name IN (${channel:sqlstring})\n    AND COALESCE(NULLIF(user_id, ''), NULLIF(user_name, '')) IS NOT NULL\n), pairs AS (\n  SELECT DISTINCT a.chatter_key, LEAST(a.channel_name, b.channel_name) AS channel_a, GREATEST(a.channel_name, b.channel_name) AS channel_b\n  FROM scoped a\n  JOIN scoped b\n    ON b.chatter_key = a.chatter_key\n   AND b.channel_name <> a.channel_name\n   AND (b.event_time, b.id) > (a.event_time, a.id)\n   AND b.event_time <= a.event_time + INTERVAL '${overlap_minutes} minutes'\n), bridge_stats AS (\n  SELECT chatter_key, COUNT(*) AS connected_pairs, COUNT(DISTINCT channel_a) + COUNT(DISTINCT channel_b) AS pair_endpoints\n  FROM pairs\n  GROUP BY chatter_key\n), message_stats AS (\n  SELECT chatter_key, MAX(chatter) AS chatter, COUNT(*) AS messages, COUNT(DISTINCT channel_name) AS channels\n  FROM scoped\n  GROUP BY chatter_key\n)\nSELECT message_stats.chatter AS \"Chatter\", message_stats.channels AS \"Channels\", bridge_stats.connected_pairs AS \"Connected pairs\", message_stats.messages AS \"Messages\"\nFROM bridge_stats\nJOIN message_stats USING (chatter_key)\nORDER BY \"Connected pairs\" DESC, \"Channels\" DESC, \"Messages\" DESC, \"Chatter\"\nLIMIT 25",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "table",
+      "title": "Multitasking Leaderboard",
+      "description": "A playful ranking of concurrent channel breadth, overlap links, message volume, and a normalized multitasking score.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 13
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto"
+          },
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Multitasking score",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH scoped AS (\n  SELECT id, event_time, channel_name, COALESCE(NULLIF(user_id, ''), 'name:' || LOWER(NULLIF(user_name, ''))) AS chatter_key, COALESCE(NULLIF(display_name, ''), NULLIF(user_name, ''), NULLIF(user_id, '')) AS chatter\n  FROM twitch_event_chat\n  WHERE $__timeFilter(event_time)\n    AND channel_name IN (${channel:sqlstring})\n    AND COALESCE(NULLIF(user_id, ''), NULLIF(user_name, '')) IS NOT NULL\n), pairs AS (\n  SELECT DISTINCT a.chatter_key, LEAST(a.channel_name, b.channel_name) AS channel_a, GREATEST(a.channel_name, b.channel_name) AS channel_b\n  FROM scoped a\n  JOIN scoped b\n    ON b.chatter_key = a.chatter_key\n   AND b.channel_name <> a.channel_name\n   AND (b.event_time, b.id) > (a.event_time, a.id)\n   AND b.event_time <= a.event_time + INTERVAL '${overlap_minutes} minutes'\n), pair_stats AS (\n  SELECT chatter_key, COUNT(*) AS concurrent_pairs\n  FROM pairs\n  GROUP BY chatter_key\n), message_stats AS (\n  SELECT chatter_key, MAX(chatter) AS chatter, COUNT(*) AS messages, COUNT(DISTINCT channel_name) AS channels\n  FROM scoped\n  GROUP BY chatter_key\n)\nSELECT\n  message_stats.chatter AS \"Chatter\",\n  message_stats.channels AS \"Channels\",\n  pair_stats.concurrent_pairs AS \"Concurrent pairs\",\n  message_stats.messages AS \"Messages\",\n  ROUND((pair_stats.concurrent_pairs::numeric * message_stats.channels / NULLIF(message_stats.messages, 0)), 3) AS \"Multitasking score\"\nFROM pair_stats\nJOIN message_stats USING (chatter_key)\nORDER BY \"Multitasking score\" DESC, \"Concurrent pairs\" DESC, \"Messages\" DESC\nLIMIT 25",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "barchart",
+      "title": "Attention Split",
+      "description": "For concurrent chatters, compare the busiest channel’s message share with all side-channel activity.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 22
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-GrYlRd"
+          },
+          "mappings": [],
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "showValue": "always",
+        "stacking": "normal",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH scoped AS (\n  SELECT event_time, channel_name, COALESCE(NULLIF(user_id, ''), 'name:' || LOWER(NULLIF(user_name, ''))) AS chatter_key, COALESCE(NULLIF(display_name, ''), NULLIF(user_name, ''), NULLIF(user_id, '')) AS chatter\n  FROM twitch_event_chat\n  WHERE $__timeFilter(event_time)\n    AND channel_name IN (${channel:sqlstring})\n    AND COALESCE(NULLIF(user_id, ''), NULLIF(user_name, '')) IS NOT NULL\n), concurrent AS (\n  SELECT DISTINCT a.chatter_key\n  FROM scoped a\n  JOIN scoped b\n    ON b.chatter_key = a.chatter_key\n   AND b.channel_name <> a.channel_name\n   AND b.event_time >= a.event_time\n   AND b.event_time <= a.event_time + INTERVAL '${overlap_minutes} minutes'\n), per_channel AS (\n  SELECT s.chatter_key, MAX(s.chatter) AS chatter, s.channel_name, COUNT(*) AS messages\n  FROM scoped s\n  JOIN concurrent c USING (chatter_key)\n  GROUP BY s.chatter_key, s.channel_name\n), ranked AS (\n  SELECT *, ROW_NUMBER() OVER (PARTITION BY chatter_key ORDER BY messages DESC, channel_name) AS channel_rank, SUM(messages) OVER (PARTITION BY chatter_key) AS total_messages\n  FROM per_channel\n), attention AS (\n  SELECT chatter_key, MAX(chatter) AS chatter, MAX(messages) FILTER (WHERE channel_rank = 1) AS primary_messages, MAX(total_messages) AS total_messages, MAX(channel_name) FILTER (WHERE channel_rank = 1) AS primary_channel\n  FROM ranked\n  GROUP BY chatter_key\n)\nSELECT primary_channel AS \"Primary channel\", ROUND(AVG(100.0 * primary_messages / NULLIF(total_messages, 0))::numeric, 1) AS \"Primary-channel share\", ROUND(AVG(100.0 - 100.0 * primary_messages / NULLIF(total_messages, 0))::numeric, 1) AS \"Side-channel share\"\nFROM attention\nGROUP BY primary_channel\nORDER BY \"Side-channel share\" DESC, primary_channel",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "barchart",
+      "title": "Switching Latency by Channel Pair",
+      "description": "Average time between messages in different channels when the second message falls inside the overlap window.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 22
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-BlPu"
+          },
+          "mappings": [],
+          "unit": "m"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "showValue": "always",
+        "legend": {
+          "displayMode": "hidden",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH scoped AS (\n  SELECT id, event_time, channel_name, COALESCE(NULLIF(user_id, ''), 'name:' || LOWER(NULLIF(user_name, ''))) AS chatter_key\n  FROM twitch_event_chat\n  WHERE $__timeFilter(event_time)\n    AND channel_name IN (${channel:sqlstring})\n    AND COALESCE(NULLIF(user_id, ''), NULLIF(user_name, '')) IS NOT NULL\n), switches AS (\n  SELECT a.chatter_key, a.channel_name AS from_channel, b.channel_name AS to_channel, EXTRACT(EPOCH FROM (b.event_time - a.event_time)) / 60.0 AS latency_minutes\n  FROM scoped a\n  JOIN scoped b\n    ON b.chatter_key = a.chatter_key\n   AND b.channel_name <> a.channel_name\n   AND (b.event_time, b.id) > (a.event_time, a.id)\n   AND b.event_time <= a.event_time + INTERVAL '${overlap_minutes} minutes'\n)\nSELECT from_channel || ' → ' || to_channel AS \"Channel switch\", ROUND(AVG(latency_minutes)::numeric, 2) AS \"Average latency\", COUNT(DISTINCT chatter_key) AS \"Chatters\"\nFROM switches\nGROUP BY from_channel, to_channel\nORDER BY \"Average latency\", \"Chatters\" DESC\nLIMIT 50",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Synchronized-Burst Timeline",
+      "description": "Distinct chatters producing cross-channel overlap events, grouped by channel pair and Grafana's adaptive time interval.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 31
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 16,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          },
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH scoped AS (\n  SELECT id, event_time, channel_name, COALESCE(NULLIF(user_id, ''), 'name:' || LOWER(NULLIF(user_name, ''))) AS chatter_key\n  FROM twitch_event_chat\n  WHERE $__timeFilter(event_time)\n    AND channel_name IN (${channel:sqlstring})\n    AND COALESCE(NULLIF(user_id, ''), NULLIF(user_name, '')) IS NOT NULL\n), overlap_events AS (\n  SELECT DISTINCT a.chatter_key, LEAST(a.channel_name, b.channel_name) || ' ↔ ' || GREATEST(a.channel_name, b.channel_name) AS pair, LEAST(a.event_time, b.event_time) AS overlap_time\n  FROM scoped a\n  JOIN scoped b\n    ON b.chatter_key = a.chatter_key\n   AND b.channel_name <> a.channel_name\n   AND (b.event_time, b.id) > (a.event_time, a.id)\n   AND b.event_time <= a.event_time + INTERVAL '${overlap_minutes} minutes'\n)\nSELECT $__timeGroupAlias(overlap_time, $__interval), pair AS metric, COUNT(DISTINCT chatter_key) AS value\nFROM overlap_events\nGROUP BY 1, 2\nORDER BY 1, 2",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "tags": [
+    "twitch",
+    "chat",
+    "concurrency",
+    "audience"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres"
+        },
+        "definition": "SELECT DISTINCT channel_name AS __text, channel_name AS __value FROM twitch_event_chat ORDER BY 1",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Channel",
+        "multi": true,
+        "name": "channel",
+        "options": [],
+        "query": "SELECT DISTINCT channel_name AS __text, channel_name AS __value FROM twitch_event_chat ORDER BY 1",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": "America/Sao_Paulo",
+          "value": "America/Sao_Paulo"
+        },
+        "hide": 0,
+        "label": "Analysis timezone",
+        "name": "timezone",
+        "options": [
+          {
+            "selected": true,
+            "text": "America/Sao_Paulo",
+            "value": "America/Sao_Paulo"
+          },
+          {
+            "selected": false,
+            "text": "UTC",
+            "value": "UTC"
+          }
+        ],
+        "query": "America/Sao_Paulo,UTC",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": "5",
+          "value": "5"
+        },
+        "hide": 0,
+        "label": "Overlap window (minutes)",
+        "name": "overlap_minutes",
+        "options": [
+          {
+            "selected": false,
+            "text": "1",
+            "value": "1"
+          },
+          {
+            "selected": false,
+            "text": "2",
+            "value": "2"
+          },
+          {
+            "selected": false,
+            "text": "3",
+            "value": "3"
+          },
+          {
+            "selected": true,
+            "text": "5",
+            "value": "5"
+          },
+          {
+            "selected": false,
+            "text": "10",
+            "value": "10"
+          },
+          {
+            "selected": false,
+            "text": "15",
+            "value": "15"
+          }
+        ],
+        "query": "1,2,3,5,10,15",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Concurrent Audience Observatory",
+  "uid": "concurrent-audience-observatory",
+  "version": 1,
+  "weekStart": ""
+}
+
