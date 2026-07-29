@@ -1,0 +1,63 @@
+= Kick Component
+:doctitle: Kick
+:shortname: kick
+:artifactid: camel-twitch
+:description: Receive anonymous Kick chat messages through Kick's Pusher WebSocket.
+:since: 0.0.2
+:supportlevel: Preview
+
+The Kick component receives anonymous chat messages from a Kick channel. It is
+consumer-only and requires no credentials.
+
+IMPORTANT: Kick's Pusher WebSocket and `/api/v2` channel endpoints are
+undocumented internal interfaces. They may change or be blocked without
+notice.
+
+== URI format
+
+[source,text]
+----
+kick:channel[?options]
+----
+
+The `channel` path value is the Kick channel slug. It is normalized to
+lowercase. The only supported event is `CHAT`, which is also the default.
+
+[source,java]
+----
+from("kick:xqc")
+    .log("${body.sender.username}: ${body.content}");
+----
+
+== Chatroom lookup
+
+By default, the component resolves the numeric chatroom ID from the channel
+slug. Kick may reject this internal HTTP lookup with Cloudflare. Supply the
+known ID with `chatroomId` to bypass lookup:
+
+[source,java]
+----
+from("kick:xqc?chatroomId=668")
+    .log("${header.x-camel-kick-user-name}: ${body.content}");
+----
+
+== Consumer
+
+Consumers emit `KickChatMessage` as the exchange body. It contains the message
+ID, optional chatroom ID, content, type, creation timestamp, and a
+`KickChatSender` with the user ID, display username, and slug.
+
+The exchange also includes `x-camel-kick-*` channel, chatroom, user, message,
+and event headers.
+
+The consumer reconnects after a fixed delay when the WebSocket closes or a
+connection attempt fails. `reconnectDelay` and `connectionTimeout` are
+configurable in milliseconds.
+
+== Component options
+
+// component options: START
+include::partial$component-configure-options.adoc[]
+include::partial$component-endpoint-options.adoc[]
+include::partial$component-endpoint-headers.adoc[]
+// component options: END

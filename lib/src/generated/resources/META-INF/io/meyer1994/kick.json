@@ -1,0 +1,48 @@
+{
+  "component": {
+    "kind": "component",
+    "name": "kick",
+    "title": "Kick",
+    "description": "Receive chat messages from a Kick channel.",
+    "deprecated": false,
+    "firstVersion": "0.0.2",
+    "label": "social",
+    "javaType": "io.meyer1994.KickComponent",
+    "supportLevel": "Preview",
+    "groupId": "io.meyer1994",
+    "artifactId": "camel-twitch",
+    "version": "0.0.2-SNAPSHOT",
+    "scheme": "kick",
+    "extendsScheme": "",
+    "syntax": "kick:channel",
+    "async": false,
+    "api": false,
+    "consumerOnly": true,
+    "producerOnly": false,
+    "lenientProperties": false,
+    "browsable": false,
+    "remote": true
+  },
+  "componentProperties": {
+    "bridgeErrorHandler": { "index": 0, "kind": "property", "displayName": "Bridge Error Handler", "group": "consumer", "label": "consumer", "required": false, "type": "boolean", "javaType": "boolean", "deprecated": false, "autowired": false, "secret": false, "defaultValue": false, "description": "Allows for bridging the consumer to the Camel routing Error Handler, which mean any exceptions (if possible) occurred while the Camel consumer is trying to pickup incoming messages, or the likes, will now be processed as a message and handled by the routing Error Handler. Important: This is only possible if the 3rd party component allows Camel to be alerted if an exception was thrown. Some components handle this internally only, and therefore bridgeErrorHandler is not possible. In other situations we may improve the Camel component to hook into the 3rd party component and make this possible for future releases. By default the consumer will use the org.apache.camel.spi.ExceptionHandler to deal with exceptions, that will be logged at WARN or ERROR level and ignored." },
+    "autowiredEnabled": { "index": 1, "kind": "property", "displayName": "Autowired Enabled", "group": "advanced", "label": "advanced", "required": false, "type": "boolean", "javaType": "boolean", "deprecated": false, "autowired": false, "secret": false, "defaultValue": true, "description": "Whether autowiring is enabled. This is used for automatic autowiring options (the option must be marked as autowired) by looking up in the registry to find if there is a single instance of matching type, which then gets configured on the component. This can be used for automatic configuring JDBC data sources, JMS connection factories, AWS Clients, etc." }
+  },
+  "headers": {
+    "x-camel-kick-channel-name": { "index": 0, "kind": "header", "displayName": "", "group": "consumer", "label": "", "required": false, "javaType": "String", "deprecated": false, "deprecationNote": "", "autowired": false, "secret": false, "description": "The Kick channel slug.", "constantName": "io.meyer1994.KickConstants#HEADER_CHANNEL_NAME" },
+    "x-camel-kick-chatroom-id": { "index": 1, "kind": "header", "displayName": "", "group": "consumer", "label": "", "required": false, "javaType": "Long", "deprecated": false, "deprecationNote": "", "autowired": false, "secret": false, "description": "The Kick chatroom ID.", "constantName": "io.meyer1994.KickConstants#HEADER_CHATROOM_ID" },
+    "x-camel-kick-user-id": { "index": 2, "kind": "header", "displayName": "", "group": "consumer", "label": "", "required": false, "javaType": "Long", "deprecated": false, "deprecationNote": "", "autowired": false, "secret": false, "description": "The Kick user ID.", "constantName": "io.meyer1994.KickConstants#HEADER_USER_ID" },
+    "x-camel-kick-user-name": { "index": 3, "kind": "header", "displayName": "", "group": "consumer", "label": "", "required": false, "javaType": "String", "deprecated": false, "deprecationNote": "", "autowired": false, "secret": false, "description": "The Kick display username.", "constantName": "io.meyer1994.KickConstants#HEADER_USER_NAME" },
+    "x-camel-kick-message-id": { "index": 4, "kind": "header", "displayName": "", "group": "consumer", "label": "", "required": false, "javaType": "String", "deprecated": false, "deprecationNote": "", "autowired": false, "secret": false, "description": "The Kick chat message ID.", "constantName": "io.meyer1994.KickConstants#HEADER_MESSAGE_ID" },
+    "x-camel-kick-event-type": { "index": 5, "kind": "header", "displayName": "", "group": "consumer", "label": "", "required": false, "javaType": "String", "deprecated": false, "deprecationNote": "", "autowired": false, "secret": false, "description": "The Kick event type.", "constantName": "io.meyer1994.KickConstants#HEADER_EVENT_TYPE" }
+  },
+  "properties": {
+    "channel": { "index": 0, "kind": "path", "displayName": "Channel", "group": "consumer", "label": "", "required": true, "type": "string", "javaType": "java.lang.String", "deprecated": false, "deprecationNote": "", "autowired": false, "secret": false, "description": "Kick channel slug" },
+    "chatroomId": { "index": 1, "kind": "parameter", "displayName": "Chatroom Id", "group": "consumer", "label": "", "required": false, "type": "integer", "javaType": "java.lang.Long", "deprecated": false, "autowired": false, "secret": false, "description": "Kick chatroom ID. When omitted, the component resolves it from the channel slug" },
+    "connectionTimeout": { "index": 2, "kind": "parameter", "displayName": "Connection Timeout", "group": "consumer", "label": "", "required": false, "type": "integer", "javaType": "int", "deprecated": false, "autowired": false, "secret": false, "defaultValue": 10000, "description": "HTTP and WebSocket connection timeout in milliseconds" },
+    "event": { "index": 3, "kind": "parameter", "displayName": "Event", "group": "consumer", "label": "", "required": false, "type": "enum", "javaType": "io.meyer1994.KickEvent", "enum": [ "CHAT" ], "deprecated": false, "autowired": false, "secret": false, "defaultValue": "CHAT", "description": "Event to consume. Only CHAT is supported" },
+    "reconnectDelay": { "index": 4, "kind": "parameter", "displayName": "Reconnect Delay", "group": "consumer", "label": "", "required": false, "type": "integer", "javaType": "long", "deprecated": false, "autowired": false, "secret": false, "defaultValue": 5000, "description": "Delay in milliseconds before reconnecting" },
+    "bridgeErrorHandler": { "index": 5, "kind": "parameter", "displayName": "Bridge Error Handler", "group": "consumer (advanced)", "label": "consumer,advanced", "required": false, "type": "boolean", "javaType": "boolean", "deprecated": false, "autowired": false, "secret": false, "defaultValue": false, "description": "Allows for bridging the consumer to the Camel routing Error Handler, which mean any exceptions (if possible) occurred while the Camel consumer is trying to pickup incoming messages, or the likes, will now be processed as a message and handled by the routing Error Handler. Important: This is only possible if the 3rd party component allows Camel to be alerted if an exception was thrown. Some components handle this internally only, and therefore bridgeErrorHandler is not possible. In other situations we may improve the Camel component to hook into the 3rd party component and make this possible for future releases. By default the consumer will use the org.apache.camel.spi.ExceptionHandler to deal with exceptions, that will be logged at WARN or ERROR level and ignored." },
+    "exceptionHandler": { "index": 6, "kind": "parameter", "displayName": "Exception Handler", "group": "consumer (advanced)", "label": "consumer,advanced", "required": false, "type": "object", "javaType": "org.apache.camel.spi.ExceptionHandler", "optionalPrefix": "consumer.", "deprecated": false, "autowired": false, "secret": false, "description": "To let the consumer use a custom ExceptionHandler. Notice if the option bridgeErrorHandler is enabled then this option is not in use. By default the consumer will deal with exceptions, that will be logged at WARN or ERROR level and ignored." },
+    "exchangePattern": { "index": 7, "kind": "parameter", "displayName": "Exchange Pattern", "group": "consumer (advanced)", "label": "consumer,advanced", "required": false, "type": "enum", "javaType": "org.apache.camel.ExchangePattern", "enum": [ "InOnly", "InOut" ], "deprecated": false, "autowired": false, "secret": false, "description": "Sets the exchange pattern when the consumer creates an exchange." }
+  }
+}

@@ -23,6 +23,7 @@
     <camel.version>4.21.0</camel.version>
     <spring-boot.version>4.1.0</spring-boot.version>
     <twitch4j.version>1.26.0</twitch4j.version>
+    <jackson.version>2.21.4</jackson.version>
   </properties>
 
   <dependencyManagement>
@@ -55,6 +56,12 @@
         <groupId>com.github.twitch4j</groupId>
         <artifactId>twitch4j</artifactId>
         <version>${twitch4j.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${jackson.version}</version>
       </dependency>
 
     </dependencies>
