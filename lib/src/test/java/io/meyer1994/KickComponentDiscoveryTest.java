@@ -29,6 +29,7 @@ class KickComponentDiscoveryTest extends CamelTestSupport {
             assertEquals(5000, metadata.path("properties").path("reconnectDelay").path("defaultValue").asInt());
             assertEquals(10000,
                     metadata.path("properties").path("connectionTimeout").path("defaultValue").asInt());
+            assertEquals(true, metadata.path("properties").path("pusher").path("autowired").asBoolean());
             assertEquals("Long",
                     metadata.path("headers").path("x-camel-kick-chatroom-id").path("javaType").asText());
             assertEquals("String",

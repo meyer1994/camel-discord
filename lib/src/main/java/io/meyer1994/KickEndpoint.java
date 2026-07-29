@@ -1,7 +1,5 @@
 package io.meyer1994;
 
-import java.util.Locale;
-
 import org.apache.camel.Category;
 import org.apache.camel.Consumer;
 import org.apache.camel.Processor;
@@ -12,10 +10,14 @@ import org.apache.camel.spi.UriParam;
 import org.apache.camel.spi.UriPath;
 import org.apache.camel.support.DefaultEndpoint;
 
+import com.pusher.client.Pusher;
+
 /** Receive chat messages from a Kick channel. */
-@UriEndpoint(firstVersion = "0.0.2", scheme = "kick", title = "Kick", syntax = "kick:channel",
-        category = Category.SOCIAL, consumerOnly = true, headersClass = KickConstants.class)
+@UriEndpoint(firstVersion = "0.0.2", scheme = "kick", title = "Kick", syntax = "kick:channel", category = Category.SOCIAL, consumerOnly = true, headersClass = KickConstants.class)
 public class KickEndpoint extends DefaultEndpoint {
+    @UriParam(description = "Kick Pusher app key")
+    @Metadata(autowired = true)
+    private Pusher pusher;
 
     @UriPath(description = "Kick channel slug")
     @Metadata(required = true)
@@ -27,11 +29,11 @@ public class KickEndpoint extends DefaultEndpoint {
     @UriParam(description = "Kick chatroom ID. When omitted, the component resolves it from the channel slug")
     private Long chatroomId;
 
-    @UriParam(defaultValue = "5000", description = "Delay in milliseconds before reconnecting")
+    @UriParam(defaultValue = "5000", description = "Maximum reconnect gap in milliseconds")
     private long reconnectDelay = 5_000;
 
-    @UriParam(defaultValue = "10000", description = "HTTP and WebSocket connection timeout in milliseconds")
-    private int connectionTimeout = 10_000;
+    @UriParam(defaultValue = "10000", description = "Kick chatroom lookup timeout in milliseconds")
+    private int connectionTimeout = 5_000;
 
     public KickEndpoint() {
     }
@@ -62,10 +64,7 @@ public class KickEndpoint extends DefaultEndpoint {
     }
 
     public void setChannel(String channel) {
-        if (channel == null || channel.isBlank()) {
-            throw new IllegalArgumentException("Kick channel must not be blank");
-        }
-        this.channel = channel.trim().toLowerCase(Locale.ROOT);
+        this.channel = channel;
     }
 
     public KickEvent getEvent() {
@@ -81,9 +80,6 @@ public class KickEndpoint extends DefaultEndpoint {
     }
 
     public void setChatroomId(Long chatroomId) {
-        if (chatroomId != null && chatroomId <= 0) {
-            throw new IllegalArgumentException("Kick chatroomId must be positive");
-        }
         this.chatroomId = chatroomId;
     }
 
@@ -92,9 +88,6 @@ public class KickEndpoint extends DefaultEndpoint {
     }
 
     public void setReconnectDelay(long reconnectDelay) {
-        if (reconnectDelay < 0) {
-            throw new IllegalArgumentException("Kick reconnectDelay must not be negative");
-        }
         this.reconnectDelay = reconnectDelay;
     }
 
@@ -103,9 +96,15 @@ public class KickEndpoint extends DefaultEndpoint {
     }
 
     public void setConnectionTimeout(int connectionTimeout) {
-        if (connectionTimeout <= 0) {
-            throw new IllegalArgumentException("Kick connectionTimeout must be positive");
-        }
         this.connectionTimeout = connectionTimeout;
     }
+
+    public Pusher getPusher() {
+        return pusher;
+    }
+
+    public void setPusher(Pusher pusher) {
+        this.pusher = pusher;
+    }
+
 }

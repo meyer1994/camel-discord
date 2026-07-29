@@ -12,14 +12,14 @@ import org.junit.jupiter.api.Test;
 class KickEndpointTest extends CamelTestSupport {
 
     @Test
-    void normalizesChannelAndDefaultsToChat() {
+    void preservesChannelAndDefaultsToChat() {
         KickEndpoint endpoint = context.getEndpoint("kick:XqC", KickEndpoint.class);
 
-        assertEquals("xqc", endpoint.getChannel());
+        assertEquals("XqC", endpoint.getChannel());
         assertEquals(KickEvent.CHAT, endpoint.getEvent());
         assertNull(endpoint.getChatroomId());
         assertEquals(5_000, endpoint.getReconnectDelay());
-        assertEquals(10_000, endpoint.getConnectionTimeout());
+        assertEquals(5_000, endpoint.getConnectionTimeout());
     }
 
     @Test
@@ -39,21 +39,14 @@ class KickEndpointTest extends CamelTestSupport {
     }
 
     @Test
-    void rejectsNonPositiveChatroomId() {
-        assertThrows(ResolveEndpointFailedException.class,
-                () -> context.getEndpoint("kick:xqc?chatroomId=0"));
-    }
+    void bindsZeroAndNegativeValuesWithoutEndpointValidation() {
+        KickEndpoint endpoint = context.getEndpoint(
+                "kick:xqc?chatroomId=0&reconnectDelay=-1&connectionTimeout=0",
+                KickEndpoint.class);
 
-    @Test
-    void rejectsNegativeReconnectDelay() {
-        assertThrows(ResolveEndpointFailedException.class,
-                () -> context.getEndpoint("kick:xqc?reconnectDelay=-1"));
-    }
-
-    @Test
-    void rejectsNonPositiveConnectionTimeout() {
-        assertThrows(ResolveEndpointFailedException.class,
-                () -> context.getEndpoint("kick:xqc?connectionTimeout=0"));
+        assertEquals(0L, endpoint.getChatroomId());
+        assertEquals(-1, endpoint.getReconnectDelay());
+        assertEquals(0, endpoint.getConnectionTimeout());
     }
 
     @Test

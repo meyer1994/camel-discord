@@ -28,6 +28,13 @@
       <artifactId>jackson-databind</artifactId>
     </dependency>
 
+    <!-- Pusher-compatible WebSocket client used by Kick chat -->
+    <dependency>
+      <groupId>com.pusher</groupId>
+      <artifactId>pusher-java-client</artifactId>
+      <version>2.4.4</version>
+    </dependency>
+
     <!-- camel -->
     <dependency>
       <groupId>org.apache.camel</groupId>

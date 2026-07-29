@@ -50,9 +50,10 @@ ID, optional chatroom ID, content, type, creation timestamp, and a
 The exchange also includes `x-camel-kick-*` channel, chatroom, user, message,
 and event headers.
 
-The consumer reconnects after a fixed delay when the WebSocket closes or a
-connection attempt fails. `reconnectDelay` and `connectionTimeout` are
-configurable in milliseconds.
+The Pusher client manages WebSocket heartbeats, reconnects, and channel
+resubscription. `reconnectDelay` controls the maximum reconnect gap in
+milliseconds. `connectionTimeout` controls the HTTP chatroom lookup timeout;
+the Pusher client owns the WebSocket handshake timeout.
 
 == Component options
 
