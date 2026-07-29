@@ -1,6 +1,6 @@
 package io.meyer1994.example;
 
-import java.util.List;
+import java.util.Set;
 
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,7 +11,10 @@ public class Camel extends RouteBuilder {
   static final String TEMPLATE_NAME = "twitch-chat-listener";
 
   @Value("${app.twitch.channels}")
-  private List<String> channels;
+  private Set<String> channels;
+
+  @Value("${app.kick.channels}")
+  private Set<String> kickChannels;
 
   @Override
   public void configure() {
@@ -23,8 +26,16 @@ public class Camel extends RouteBuilder {
 
     for (String channel : channels) {
       from("twitch:%s?event=CHAT".formatted(channel))
+          // .log("TWITCH CHAT EVENT: ${body}")
           .wireTap("seda:twitch-chat-insert")
           .wireTap("seda:twitch-chat-listener");
+    }
+
+    for (String channel : kickChannels) {
+      from("kick:%s?event=CHAT".formatted(channel))
+          // .log("KICK CHAT EVENT: ${body}")
+          .wireTap("seda:kick-chat-insert")
+          .wireTap("seda:kick-chat-listener");
     }
 
     from("seda:twitch-chat-insert?concurrentConsumers=4")
@@ -55,16 +66,81 @@ public class Camel extends RouteBuilder {
                 :#${body.subscriberMonths},
                 :#${body.subscriptionTier},
                 :#${body.nonce},
+                jsonb_build_object(
+                  'eventType', 'ChannelMessageEvent',
+                  'channel', jsonb_build_object(
+                    'id', CAST(:#${body.channel.id} AS TEXT),
+                    'name', CAST(:#${body.channel.name} AS TEXT)
+                  ),
+                  'user', jsonb_build_object(
+                    'id', CAST(:#${body.user.id} AS TEXT),
+                    'name', CAST(:#${body.user.name} AS TEXT)
+                  ),
+                  'message', CAST(:#${body.message} AS TEXT),
+                  'subscriberMonths', CAST(:#${body.subscriberMonths} AS INTEGER),
+                  'subscriptionTier', CAST(:#${body.subscriptionTier} AS INTEGER),
+                  'nonce', CAST(:#${body.nonce} AS TEXT),
+                  'messageEvent', jsonb_build_object(
+                    'messageId', CAST(:#${body.messageEvent.messageId.orElse(null)} AS TEXT),
+                    'firedAt', CAST(:#${body.messageEvent.firedAtInstant.atOffset('Z')} AS TEXT),
+                    'rawMessage', CAST(:#${body.messageEvent.rawMessage} AS TEXT),
+                    'commandType', CAST(:#${body.messageEvent.commandType} AS TEXT),
+                    'channelId', CAST(:#${body.messageEvent.channelId} AS TEXT),
+                    'channelName', CAST(:#${body.messageEvent.channelName.orElse(null)} AS TEXT),
+                    'message', CAST(:#${body.messageEvent.message.orElse(null)} AS TEXT),
+                    'payload', CAST(:#${body.messageEvent.payload.orElse(null)} AS TEXT),
+                    'clientName', CAST(:#${body.messageEvent.clientName.orElse(null)} AS TEXT),
+                    'userId', CAST(:#${body.messageEvent.userId} AS TEXT),
+                    'userName', CAST(:#${body.messageEvent.userName} AS TEXT),
+                    'userDisplayName', CAST(:#${body.messageEvent.userDisplayName.orElse(null)} AS TEXT),
+                    'userChatColor', CAST(:#${body.messageEvent.userChatColor.orElse(null)} AS TEXT),
+                    'targetUserId', CAST(:#${body.messageEvent.targetUserId} AS TEXT),
+                    'nonce', CAST(:#${body.messageEvent.nonce.orElse(null)} AS TEXT),
+                    'subscriberMonths', CAST(:#${body.messageEvent.subscriberMonths.orElse(0)} AS INTEGER),
+                    'subscriptionTier', CAST(:#${body.messageEvent.subscriptionTier.orElse(0)} AS INTEGER)
+                  ),
+                  'replyInfo', NULL,
+                  'chantInfo', NULL,
+                  'botOwnerIds', jsonb_build_array()
+                )::JSONB
+              )
+            """)
+        .log("Inserted twitch message: ${body.channel.name} ${body.messageEvent.messageId}");
+
+    from("seda:kick-chat-insert?concurrentConsumers=4")
+        .to("""
+            sql:
+              INSERT INTO kick_event_chat (
+                message_id,
+                event_time,
+                chatroom_id,
+                channel_name,
+                user_id,
+                user_name,
+                message,
+                message_type,
+                raw_event
+              ) VALUES (
+                :#${body.id},
+                CAST(:#${body.createdAt} AS TIMESTAMPTZ),
+                :#${body.chatroomId},
+                :#${headers['x-camel-kick-channel-name']},
+                :#${body.sender.id},
+                :#${body.sender.username},
+                :#${body.content},
+                :#${body.type},
                 CAST('{}' AS jsonb)
               )
             """)
-        .sample(100)
-        .log("Inserted message into database: ${body.channel.name} ${body.messageEvent.messageId}");
+        .log("Inserted kick message: ${body.id}");
+
+    from("seda:kick-chat-listener")
+        .bean(Kick.class, "publish")
+        .log("Published kick message to SEDA: ${body.id}");
 
     from("seda:twitch-chat-listener")
         .bean(Twitch.class, "publish")
-        .sample(100)
-        .log("Published message to SEDA: ${body.channel.name} ${body.messageEvent.messageId}");
+        .log("Published twitch message to SEDA: ${body.channel.name} ${body.messageEvent.messageId}");
 
     from("direct:twitch-chat-top-chatters")
         .to("""
@@ -81,7 +157,7 @@ public class Camel extends RouteBuilder {
         .to("""
             sql:
               SELECT
-                CAST(EXTRACT(EPOCH FROM DATE_TRUNC('second', event_time)) * 1000 AS BIGINT) AS time,
+                CAST(EXTRACT(EPOCH FROM DATE_TRUNC('second', event_time)) * 100 AS BIGINT) AS time,
                 COUNT(*) AS value
               FROM twitch_event_chat
               WHERE channel_name = :#${body}
@@ -94,7 +170,7 @@ public class Camel extends RouteBuilder {
         .to("""
             sql:
               SELECT
-                CAST(EXTRACT(EPOCH FROM DATE_TRUNC('minute', event_time)) * 1000 AS BIGINT) AS time,
+                CAST(EXTRACT(EPOCH FROM DATE_TRUNC('minute', event_time)) * 100 AS BIGINT) AS time,
                 COUNT(*) AS value
               FROM twitch_event_chat
               WHERE channel_name = :#${body}

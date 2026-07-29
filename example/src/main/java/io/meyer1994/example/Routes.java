@@ -1,5 +1,6 @@
 package io.meyer1994.example;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -16,15 +17,18 @@ import reactor.core.publisher.Flux;
 
 @Controller
 public class Routes {
-    private final Twitch stream;
+    private final Twitch twitch;
+    private final Kick kick;
     private final Stats stats;
     private final List<String> channels;
 
     public Routes(
-            Twitch stream,
+            Twitch twitch,
+            Kick kick,
             Stats stats,
             @Value("${app.twitch.channels}") List<String> channels) {
-        this.stream = stream;
+        this.twitch = twitch;
+        this.kick = kick;
         this.stats = stats;
         this.channels = channels;
     }
@@ -50,13 +54,15 @@ public class Routes {
     @ResponseBody
     @GetMapping(path = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> events(@RequestParam("channel") String channel) {
-        return stream.stream(channel);
+        return withHeartbeat(Flux.merge(
+                twitch.stream(channel),
+                kick.stream(channel)));
     }
 
     @ResponseBody
     @GetMapping(path = "/events/chatter", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> chatterEvents(@RequestParam("chatter") String chatter) {
-        return stream.streamChatter(chatter);
+        return withHeartbeat(twitch.streamChatter(chatter));
     }
 
     @ResponseBody
@@ -155,5 +161,12 @@ public class Routes {
 
     private List<Map<String, Object>> rowsMinute(String route, String value) {
         return stats.rowsMinute(route, value);
+    }
+
+    private static Flux<ServerSentEvent<String>> withHeartbeat(
+            Flux<ServerSentEvent<String>> events) {
+        Flux<ServerSentEvent<String>> heartbeats = Flux.interval(Duration.ofSeconds(15))
+                .map(tick -> ServerSentEvent.<String>builder().comment("keepalive").build());
+        return Flux.merge(events, heartbeats);
     }
 }
