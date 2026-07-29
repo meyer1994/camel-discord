@@ -5,15 +5,16 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 
 import org.apache.camel.Processor;
 import org.apache.camel.support.DefaultConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pusher.client.channel.Channel;
 
 /** Consumes Kick chat messages from the public Pusher chatroom channel. */
 public class KickConsumer extends DefaultConsumer {
@@ -23,7 +24,7 @@ public class KickConsumer extends DefaultConsumer {
 
     private final KickEndpoint endpoint;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final HttpClient http = HttpClient.newHttpClient();
+    private static final HttpClient http = HttpClient.newHttpClient();
 
     private long chatroomId;
 
@@ -34,38 +35,55 @@ public class KickConsumer extends DefaultConsumer {
 
     @Override
     protected void doInit() throws Exception {
-        chatroomId = endpoint.getChatroomId() == null
-                ? resolveChatroomId(endpoint.getChannel())
-                : endpoint.getChatroomId();
-        LOG.info("Resolved chatroom ID for channel {} to {}", endpoint.getChannel(), chatroomId);
-
-        Channel subscribedChannel = endpoint.getPusher().subscribe("chatrooms." + chatroomId + ".v2");
-        KickHandler handler = new KickHandler(this);
-        subscribedChannel.bind(CHAT_MESSAGE_EVENT, handler::onChatEvent);
-
         super.doInit();
+
+        Long configuredChatroomId = endpoint.getChatroomId();
+        if (configuredChatroomId != null) {
+            chatroomId = configuredChatroomId;
+            subscribe(chatroomId);
+            return;
+        }
+
+        resolveChatroomId(endpoint.getChannel())
+                .thenAccept(this::subscribe)
+                .exceptionally(error -> {
+                    getExceptionHandler().handleException(
+                            "Could not resolve Kick chatroom for channel " + endpoint.getChannel(),
+                            error);
+                    return null;
+                });
     }
 
-    protected long resolveChatroomId(String channel) throws Exception {
+    private void subscribe(long id) {
+        LOG.info("Resolved chatroom ID for channel {} to {}", endpoint.getChannel(), id);
+        endpoint.getPusher()
+                .subscribe("chatrooms." + id + ".v2")
+                .bind(CHAT_MESSAGE_EVENT, new KickHandler(this)::onChatEvent);
+    }
+
+    protected CompletableFuture<Long> resolveChatroomId(String channel) throws Exception {
         String str = String.format("https://kick.com/api/v2/channels/%s/chatroom", channel);
         URI uri = URI.create(str);
+        LOG.info("Resolving chatroom ID for channel {} to {}", channel, uri);
 
         HttpRequest request = HttpRequest.newBuilder(uri)
+                .timeout(Duration.ofSeconds(10))
                 .header("Accept", "application/json")
+                .header("User-Agent", "xh/0.25.3")
                 .GET()
                 .build();
 
         BodyHandler<String> body = HttpResponse.BodyHandlers.ofString();
-        HttpResponse<String> response = http.send(request, body);
 
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new IllegalStateException(
-                    "Kick chatroom lookup returned HTTP " + response.statusCode()
-                            + "; configure chatroomId explicitly if Kick blocks anonymous lookup");
-        }
-
-        JsonNode node = objectMapper.readTree(response.body()).get("id");
-        return node.asLong();
+        return http.sendAsync(request, body)
+                .thenApply(e -> {
+                    try {
+                        chatroomId = objectMapper.readTree(e.body()).get("id").asLong();
+                        return chatroomId;
+                    } catch (JsonProcessingException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                });
     }
 
     long getChatroomId() {
