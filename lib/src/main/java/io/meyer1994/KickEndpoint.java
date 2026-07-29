@@ -54,11 +54,6 @@ public class KickEndpoint extends DefaultEndpoint {
         return consumer;
     }
 
-    @Override
-    public boolean isSingleton() {
-        return true;
-    }
-
     public String getChannel() {
         return channel;
     }
