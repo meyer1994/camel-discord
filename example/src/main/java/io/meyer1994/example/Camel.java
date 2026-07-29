@@ -16,6 +16,8 @@ public class Camel extends RouteBuilder {
   @Value("${app.kick.channels}")
   private Set<String> kickChannels;
 
+  private static final int SAMPLE = 100;
+
   @Override
   public void configure() {
     routeTemplate(TEMPLATE_NAME)
@@ -105,7 +107,9 @@ public class Camel extends RouteBuilder {
                 )::JSONB
               )
             """)
-        .log("Inserted twitch message: ${body.channel.name} ${body.messageEvent.messageId}");
+        .sample(SAMPLE)
+        .log(
+            "Inserted twitch message: ${body.channel.name} ${body.messageEvent.messageId} (sample: ${headers['x-camel-sample-count']})");
 
     from("seda:kick-chat-insert?concurrentConsumers=4")
         .to("""
@@ -132,14 +136,18 @@ public class Camel extends RouteBuilder {
                 CAST('{}' AS jsonb)
               )
             """)
-        .log("Inserted kick message: ${headers['x-camel-kick-channel-name']} ${body.id}");
+        .sample(SAMPLE)
+        .log(
+            "Inserted kick message: ${headers['x-camel-kick-channel-name']} ${body.id} (sample: ${headers['x-camel-sample-count']})");
 
     from("seda:kick-chat-listener")
         .bean(Kick.class, "publish")
+        .sample(SAMPLE)
         .log("Published kick message to SEDA: ${headers['x-camel-kick-channel-name']} ${body.id}");
 
     from("seda:twitch-chat-listener")
         .bean(Twitch.class, "publish")
+        .sample(SAMPLE)
         .log("Published twitch message to SEDA: ${body.channel.name} ${body.messageEvent.messageId}");
 
     from("direct:twitch-chat-top-chatters")
