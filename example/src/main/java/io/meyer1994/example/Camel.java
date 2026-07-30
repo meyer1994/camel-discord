@@ -106,10 +106,13 @@ public class Camel extends RouteBuilder {
                   'botOwnerIds', jsonb_build_array()
                 )::JSONB
               )
+              RETURNING *
             """)
+        .split().body()
+        .wireTap("seda:twitch-chat-embed")
         .sample(SAMPLE)
         .log(
-            "Inserted twitch message: ${body.channel.name} ${body.messageEvent.messageId} (sample: ${headers['x-camel-sample-count']})");
+            "Inserted twitch message: ${body[channel_name]} ${body[message_id]}");
 
     from("seda:kick-chat-insert?concurrentConsumers=4")
         .to("""
@@ -135,10 +138,41 @@ public class Camel extends RouteBuilder {
                 :#${body.type},
                 CAST('{}' AS jsonb)
               )
+              RETURNING *
             """)
+        .split().body()
+        .wireTap("seda:kick-chat-embed")
         .sample(SAMPLE)
         .log(
-            "Inserted kick message: ${headers['x-camel-kick-channel-name']} ${body.id} (sample: ${headers['x-camel-sample-count']})");
+            "Inserted kick message: ${body[message_id]} ${body[channel_name]}");
+
+    from("seda:twitch-chat-embed?concurrentConsumers=8")
+        .sample(10)
+        .setVariable("id").simple("${body[id]}")
+        .setVariable("channel_name").simple("${body[channel_name]}")
+        .setVariable("message_id").simple("${body[message_id]}")
+        .setVariable("message").simple("${body[message]}")
+        .log(
+            "Getting embedding for twitch message: ${variable:message_id} ${variable:channel_name}")
+        .to("openai:embeddings?embeddingModel=text-embedding-3-small")
+        .setVariable("embedding").simple("${body.toString()}")
+        .to("sql:UPDATE twitch_event_chat SET message_embeddings = :#embedding::vector WHERE id = :#id")
+        .log(
+            "Updated twitch message: ${variable:message_id} ${variable:channel_name}");
+
+    from("seda:kick-chat-embed?concurrentConsumers=8")
+        .sample(10)
+        .setVariable("id").simple("${body[id]}")
+        .setVariable("channel_name").simple("${body[channel_name]}")
+        .setVariable("message_id").simple("${body[message_id]}")
+        .setVariable("message").simple("${body[message]}")
+        .log(
+            "Getting embedding for kick message: ${variable:message_id} ${variable:channel_name}")
+        .to("openai:embeddings?embeddingModel=text-embedding-3-small")
+        .setVariable("embedding").simple("${body.toString()}")
+        .to("sql:UPDATE twitch_event_chat SET message_embeddings = :#embedding::vector WHERE id = :#id")
+        .log(
+            "Updated twitch message: ${variable:message_id} ${variable:channel_name}");
 
     from("seda:kick-chat-listener")
         .bean(Kick.class, "publish")

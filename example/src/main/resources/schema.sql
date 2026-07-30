@@ -1,3 +1,4 @@
+CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 
@@ -11,6 +12,7 @@ CREATE TABLE IF NOT EXISTS twitch_event_chat (
     user_name TEXT,
     display_name TEXT,
     message TEXT NOT NULL,
+    message_embeddings VECTOR(1536),
     subscriber_months INTEGER NOT NULL DEFAULT 0,
     subscription_tier INTEGER NOT NULL DEFAULT 0,
     nonce TEXT,
@@ -60,6 +62,7 @@ CREATE TABLE IF NOT EXISTS kick_event_chat (
     user_id BIGINT,
     user_name TEXT,
     message TEXT NOT NULL,
+    message_embeddings VECTOR(1536),
     message_type TEXT NOT NULL,
     raw_event JSONB NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
