@@ -22,6 +22,12 @@ public class Camel extends RouteBuilder {
   @Value("${app.sample.twitch-embeddings:100}")
   private int twitchEmbeddingsSample;
 
+  @Value("${app.kick.max-messages:2000000}")
+  private int kickMaxMessages;
+
+  @Value("${app.twitch.max-messages:2000000}")
+  private int twitchMaxMessages;
+
   @Value("${app.sample.logs:100}")
   private int logsSample;
 
@@ -153,7 +159,7 @@ public class Camel extends RouteBuilder {
         .log(
             "Inserted kick message: ${body[message_id]} ${body[channel_name]}");
 
-    from("seda:twitch-chat-embed?concurrentConsumers=8")
+    from("seda:twitch-chat-embed?concurrentConsumers=16&size=10000")
         .sample(twitchEmbeddingsSample)
         .setVariable("id").simple("${body[id]}")
         .setVariable("channel_name").simple("${body[channel_name]}")
@@ -162,12 +168,13 @@ public class Camel extends RouteBuilder {
         .log(
             "Getting embedding for twitch message: ${variable:message_id} ${variable:channel_name}")
         .to("openai:embeddings?embeddingModel=text-embedding-3-small")
+        .filter().simple("${size()} > 0")
         .setVariable("embedding").simple("${body.toString()}")
         .to("sql:UPDATE twitch_event_chat SET message_embeddings = :#embedding::vector WHERE id = :#id")
         .log(
             "Updated twitch message: ${variable:message_id} ${variable:channel_name}");
 
-    from("seda:kick-chat-embed?concurrentConsumers=8")
+    from("seda:kick-chat-embed?concurrentConsumers=16&size=10000")
         .sample(kickEmbeddingsSample)
         .setVariable("id").simple("${body[id]}")
         .setVariable("channel_name").simple("${body[channel_name]}")
@@ -176,20 +183,51 @@ public class Camel extends RouteBuilder {
         .log(
             "Getting embedding for kick message: ${variable:message_id} ${variable:channel_name}")
         .to("openai:embeddings?embeddingModel=text-embedding-3-small")
+        .filter().simple("${size()} > 0")
         .setVariable("embedding").simple("${body.toString()}")
         .to("sql:UPDATE twitch_event_chat SET message_embeddings = :#embedding::vector WHERE id = :#id")
         .log(
             "Updated twitch message: ${variable:message_id} ${variable:channel_name}");
 
-    from("seda:kick-chat-listener")
+    from("seda:kick-chat-listener?size=10000")
         .bean(Kick.class, "publish")
         .sample(logsSample)
         .log("Published kick message to SEDA: ${headers['x-camel-kick-channel-name']} ${body.id}");
 
-    from("seda:twitch-chat-listener")
+    from("seda:twitch-chat-listener?size=10000")
         .bean(Twitch.class, "publish")
         .sample(logsSample)
         .log("Published twitch message to SEDA: ${body.channel.name} ${body.messageEvent.messageId}");
+
+    from("timer:twitch-chat-delete?period=60000")
+        .setVariable("maxMessages").constant(Math.max(0, this.twitchMaxMessages))
+        .to("""
+            sql:
+              DELETE FROM twitch_event_chat
+              WHERE id IN (
+                SELECT id
+                FROM twitch_event_chat
+                ORDER BY event_time DESC NULLS LAST, id DESC
+                OFFSET :#${variable.maxMessages}
+              )
+            """)
+        .log("Twitch retention plan: ${body}")
+        .log("Would delete twitch messages beyond the most recent ${variable.maxMessages}");
+
+    from("timer:kick-chat-delete?period=60000")
+        .setVariable("maxMessages").constant(Math.max(0, this.kickMaxMessages))
+        .to("""
+            sql:
+              DELETE FROM kick_event_chat
+              WHERE id IN (
+                SELECT id
+                FROM kick_event_chat
+                ORDER BY event_time DESC NULLS LAST, id DESC
+                OFFSET :#${variable.maxMessages}
+              )
+            """)
+        .log("Kick retention plan: ${body}")
+        .log("Would delete kick messages beyond the most recent ${variable.maxMessages}");
 
     from("direct:twitch-chat-top-chatters")
         .to("""

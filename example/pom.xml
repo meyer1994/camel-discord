@@ -40,6 +40,12 @@
       <artifactId>camel-openai-starter</artifactId>
     </dependency>
 
+    <!-- Camel timer -->
+    <dependency>
+      <groupId>org.apache.camel.springboot</groupId>
+      <artifactId>camel-timer-starter</artifactId>
+    </dependency>
+
     <!-- Database -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
