@@ -16,7 +16,14 @@ public class Camel extends RouteBuilder {
   @Value("${app.kick.channels}")
   private Set<String> kickChannels;
 
-  private static final int SAMPLE = 100;
+  @Value("${app.sample.kick-embeddings:100}")
+  private int kickEmbeddingsSample;
+
+  @Value("${app.sample.twitch-embeddings:100}")
+  private int twitchEmbeddingsSample;
+
+  @Value("${app.sample.logs:100}")
+  private int logsSample;
 
   @Override
   public void configure() {
@@ -110,7 +117,7 @@ public class Camel extends RouteBuilder {
             """)
         .split().body()
         .wireTap("seda:twitch-chat-embed")
-        .sample(SAMPLE)
+        .sample(logsSample)
         .log(
             "Inserted twitch message: ${body[channel_name]} ${body[message_id]}");
 
@@ -142,12 +149,12 @@ public class Camel extends RouteBuilder {
             """)
         .split().body()
         .wireTap("seda:kick-chat-embed")
-        .sample(SAMPLE)
+        .sample(logsSample)
         .log(
             "Inserted kick message: ${body[message_id]} ${body[channel_name]}");
 
     from("seda:twitch-chat-embed?concurrentConsumers=8")
-        .sample(10)
+        .sample(twitchEmbeddingsSample)
         .setVariable("id").simple("${body[id]}")
         .setVariable("channel_name").simple("${body[channel_name]}")
         .setVariable("message_id").simple("${body[message_id]}")
@@ -161,7 +168,7 @@ public class Camel extends RouteBuilder {
             "Updated twitch message: ${variable:message_id} ${variable:channel_name}");
 
     from("seda:kick-chat-embed?concurrentConsumers=8")
-        .sample(10)
+        .sample(kickEmbeddingsSample)
         .setVariable("id").simple("${body[id]}")
         .setVariable("channel_name").simple("${body[channel_name]}")
         .setVariable("message_id").simple("${body[message_id]}")
@@ -176,12 +183,12 @@ public class Camel extends RouteBuilder {
 
     from("seda:kick-chat-listener")
         .bean(Kick.class, "publish")
-        .sample(SAMPLE)
+        .sample(logsSample)
         .log("Published kick message to SEDA: ${headers['x-camel-kick-channel-name']} ${body.id}");
 
     from("seda:twitch-chat-listener")
         .bean(Twitch.class, "publish")
-        .sample(SAMPLE)
+        .sample(logsSample)
         .log("Published twitch message to SEDA: ${body.channel.name} ${body.messageEvent.messageId}");
 
     from("direct:twitch-chat-top-chatters")
