@@ -1,5 +1,7 @@
 package io.meyer1994;
 
+import java.io.Serializable;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -10,7 +12,7 @@ public record KickChatMessage(
         String content,
         String type,
         @JsonProperty("created_at") String createdAt,
-        KickChatSender sender) {
+        KickChatSender sender) implements Serializable {
 
     public KickChatMessage {
         if (id == null || id.isBlank()) {
