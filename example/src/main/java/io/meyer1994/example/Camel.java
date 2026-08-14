@@ -1,5 +1,6 @@
 package io.meyer1994.example;
 
+import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -26,14 +27,14 @@ public class Camel extends RouteBuilder {
     routeTemplate(TWITCH_TEMPLATE_NAME)
         .templateParameter("channel")
         .from("twitch:{{channel}}?event=CHAT")
-        .log("Received twitch message: ${body}")
+        .log(LoggingLevel.DEBUG, "Received twitch message: ${body}")
         .wireTap("seda:twitch-chat-insert")
         .wireTap("seda:twitch-chat-listener");
 
     routeTemplate(KICK_TEMPLATE_NAME)
         .templateParameter("channel")
         .from("kick:{{channel}}?event=CHAT")
-        .log("Received kick message: ${body}")
+        .log(LoggingLevel.DEBUG, "Received kick message: ${body}")
         .wireTap("seda:kick-chat-insert")
         .wireTap("seda:kick-chat-listener");
 
