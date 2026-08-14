@@ -1,7 +1,5 @@
 package io.meyer1994.example;
 
-import java.util.Set;
-
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -11,23 +9,11 @@ public class Camel extends RouteBuilder {
   static final String TWITCH_TEMPLATE_NAME = "twitch-chat-listener";
   static final String KICK_TEMPLATE_NAME = "kick-chat-listener";
 
-  @Value("${app.kick.channels}")
-  private Set<String> kickChannels;
-
-  @Value("${app.sample.kick-embeddings:100}")
-  private int kickEmbeddingsSample;
-
-  @Value("${app.sample.twitch-embeddings:100}")
-  private int twitchEmbeddingsSample;
-
-  @Value("${app.kick.max-messages:2000000}")
+  @Value("${app.kick.max-messages:100000}")
   private int kickMaxMessages;
 
-  @Value("${app.twitch.max-messages:2000000}")
+  @Value("${app.twitch.max-messages:100000}")
   private int twitchMaxMessages;
-
-  @Value("${app.sample.logs:100}")
-  private int logsSample;
 
   @Override
   public void configure() {
@@ -143,7 +129,6 @@ public class Camel extends RouteBuilder {
             """)
         .split().body()
         .wireTap("seda:kick-chat-embed")
-        .sample(logsSample)
         .log("Inserted kick message: ${body[message_id]} ${body[channel_name]}");
 
     from("seda:twitch-chat-embed?concurrentConsumers=16&size=10000")
