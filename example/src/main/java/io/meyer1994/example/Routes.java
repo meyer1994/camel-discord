@@ -1,183 +1,102 @@
 package io.meyer1994.example;
 
 import java.time.Duration;
-import java.util.List;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.camel.Produce;
-import org.apache.camel.ProducerTemplate;
+import org.apache.camel.CamelContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.util.UriUtils;
 
 import reactor.core.publisher.Flux;
 
 @Controller
 public class Routes {
-    private final Twitch twitch;
-    private final Kick kick;
-    private final Stats stats;
-    private final List<String> channels;
+    @Autowired
+    private Twitch twitch;
 
     @Autowired
-    @Produce("direct:chat-search")
-    private ProducerTemplate producer;
+    private Kick kick;
 
-    public Routes(
-            Twitch twitch,
-            Kick kick,
-            Stats stats,
-            @Value("${app.twitch.channels}") List<String> channels) {
-        this.twitch = twitch;
-        this.kick = kick;
-        this.stats = stats;
-        this.channels = channels;
-    }
+    @Autowired
+    private CamelContext camelContext;
+
+    @Value("${app.twitch.channels}")
+    private Set<String> channels = Collections.emptySet();
+
+    private final Set<String> configuredChannels = ConcurrentHashMap.newKeySet();
+
+    private static final Logger logger = LoggerFactory.getLogger(Routes.class);
 
     @GetMapping(path = "/", produces = MediaType.TEXT_HTML_VALUE)
     public String index(Model model) {
         model.addAttribute("channels", channels);
+        model.addAttribute("feed", false);
         return "index";
     }
 
-    @GetMapping(path = "/channel", produces = MediaType.TEXT_HTML_VALUE)
-    public String channel(@RequestParam("channel") String channel, Model model) {
-        model.addAttribute("channel", channel);
-        return "channel";
+    @GetMapping(path = "/c", produces = MediaType.TEXT_HTML_VALUE)
+    public String selectChannel(@RequestParam("channel") String channel) {
+        return "redirect:/c/" + UriUtils.encodePathSegment(channel, java.nio.charset.StandardCharsets.UTF_8);
     }
 
-    @GetMapping(path = "/chatter", produces = MediaType.TEXT_HTML_VALUE)
-    public String chatter(@RequestParam("chatter") String chatter, Model model) {
-        model.addAttribute("chatter", chatter);
-        return "chatter";
+    @GetMapping(path = "/c/{channel}", produces = MediaType.TEXT_HTML_VALUE)
+    public String channel(@PathVariable("channel") String channel, Model model) throws Exception {
+        channel = channel.trim().toLowerCase();
+
+        synchronized (configuredChannels) {
+            String kickEndpoint = String.format("kick:channel:%s?event=CHAT", channel);
+            String twitchEndpoint = String.format("twitch:channel:%s?event=CHAT", channel);
+
+            if (camelContext.hasEndpoint(kickEndpoint) == null) {
+                logger.info("Adding KICK route for channel: {}", channel);
+                camelContext.addRouteFromTemplate(kickEndpoint,
+                        Camel.KICK_TEMPLATE_NAME,
+                        Map.of("channel", channel));
+            }
+
+            if (camelContext.hasEndpoint(twitchEndpoint) == null) {
+                logger.info("Adding TWITCH route for channel: {}", channel);
+                camelContext.addRouteFromTemplate(twitchEndpoint,
+                        Camel.TWITCH_TEMPLATE_NAME,
+                        Map.of("channel", channel));
+            }
+
+            configuredChannels.add(channel);
+        }
+
+        model.addAttribute("feed", true);
+        model.addAttribute("channel", channel);
+        return "index";
     }
 
     @ResponseBody
-    @GetMapping(path = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<ServerSentEvent<String>> events(@RequestParam("channel") String channel) {
+    @GetMapping(path = "/c/{channel}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent<String>> events(@PathVariable("channel") String channel) {
+        channel = channel.trim().toLowerCase();
+
+        if (!configuredChannels.contains(channel)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Channel is not configured: " + channel);
+        }
+
         return withHeartbeat(Flux.merge(
-                twitch.stream(channel),
-                kick.stream(channel)));
-    }
-
-    @ResponseBody
-    @GetMapping(path = "/events/chatter", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<ServerSentEvent<String>> chatterEvents(@RequestParam("chatter") String chatter) {
-        return withHeartbeat(twitch.streamChatter(chatter));
-    }
-
-    @ResponseBody
-    @GetMapping("/api/stats/messages")
-    public List<Map<String, Object>> messages(@RequestParam("channel") String channel) {
-        return rows("direct:twitch-chat-messages-5min", channel);
-    }
-
-    @ResponseBody
-    @GetMapping("/api/stats/messages/hour")
-    public List<Map<String, Object>> messagesLastHour(@RequestParam("channel") String channel) {
-        return rowsMinute("direct:twitch-chat-messages-1h", channel);
-    }
-
-    @ResponseBody
-    @GetMapping("/api/stats/messages/total")
-    public List<Map<String, Object>> totalMessages(@RequestParam("channel") String channel) {
-        return rowsMinute("direct:twitch-chat-message-count", channel);
-    }
-
-    @GetMapping(path = "/api/chat/search", produces = MediaType.TEXT_HTML_VALUE)
-    public String chatSearch(@RequestParam("query") String query, @RequestParam("channel") String channel,
-            Model model) {
-        Map<String, String> body = Map.of("channel", channel, "query", query);
-        Object matches = producer.requestBody(body);
-        model.addAttribute("channel", channel);
-        model.addAttribute("matches", matches);
-        return "channel :: chat-search-results";
-    }
-
-    @ResponseBody
-    @GetMapping("/api/stats/velocity")
-    public List<Map<String, Object>> velocity(@RequestParam("channel") String channel) {
-        return rows("direct:twitch-chat-velocity-5min", channel);
-    }
-
-    @ResponseBody
-    @GetMapping("/api/stats/chatters")
-    public List<Map<String, Object>> chatters(@RequestParam("channel") String channel) {
-        return rows("direct:twitch-chat-chatters-5min", channel);
-    }
-
-    @ResponseBody
-    @GetMapping("/api/stats/chatters/top")
-    public List<Map<String, Object>> topChatters(@RequestParam("channel") String channel) {
-        return rows("direct:twitch-chat-top-chatters", channel);
-    }
-
-    @ResponseBody
-    @GetMapping("/api/stats/messages/length")
-    public List<Map<String, Object>> messageLengths(@RequestParam("channel") String channel) {
-        return rows("direct:twitch-chat-message-lengths", channel);
-    }
-
-    @ResponseBody
-    @GetMapping("/api/stats/subscribers/tiers")
-    public List<Map<String, Object>> subscriberTiers(@RequestParam("channel") String channel) {
-        return rows("direct:twitch-chat-subscription-tiers", channel);
-    }
-
-    @ResponseBody
-    @GetMapping("/api/stats/activity/hour")
-    public List<Map<String, Object>> activityByHour(@RequestParam("channel") String channel) {
-        return rows("direct:twitch-chat-activity-by-hour", channel);
-    }
-
-    @ResponseBody
-    @GetMapping("/api/chatters/summary")
-    public List<Map<String, Object>> chatterSummary(@RequestParam("chatter") String chatter) {
-        return rows("direct:twitch-chatter-summary", chatter);
-    }
-
-    @ResponseBody
-    @GetMapping("/api/chatters/channels")
-    public List<Map<String, Object>> chatterChannels(@RequestParam("chatter") String chatter) {
-        return rows("direct:twitch-chatter-by-channel", chatter);
-    }
-
-    @ResponseBody
-    @GetMapping("/api/chatters/timeline")
-    public List<Map<String, Object>> chatterTimeline(@RequestParam("chatter") String chatter) {
-        return rows("direct:twitch-chatter-timeline", chatter);
-    }
-
-    @ResponseBody
-    @GetMapping("/api/chatters/lengths")
-    public List<Map<String, Object>> chatterLengths(@RequestParam("chatter") String chatter) {
-        return rows("direct:twitch-chatter-lengths", chatter);
-    }
-
-    @ResponseBody
-    @GetMapping("/api/chatters/tiers")
-    public List<Map<String, Object>> chatterTiers(@RequestParam("chatter") String chatter) {
-        return rows("direct:twitch-chatter-tiers", chatter);
-    }
-
-    @ResponseBody
-    @GetMapping("/api/chatters/activity/hour")
-    public List<Map<String, Object>> chatterActivityByHour(@RequestParam("chatter") String chatter) {
-        return rows("direct:twitch-chatter-activity-by-hour", chatter);
-    }
-
-    private List<Map<String, Object>> rows(String route, String value) {
-        return stats.rows(route, value);
-    }
-
-    private List<Map<String, Object>> rowsMinute(String route, String value) {
-        return stats.rowsMinute(route, value);
+                kick.stream(channel),
+                twitch.stream(channel)));
     }
 
     private static Flux<ServerSentEvent<String>> withHeartbeat(

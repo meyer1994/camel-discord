@@ -1,123 +1,65 @@
 <!doctype html>
 <html lang="en" data-theme="dark" xmlns:th="http://www.thymeleaf.org">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Twitch Channels</title>
+  <title th:text="${feed} ? |Live chat - ${channel}| : 'Live chat'">Live chat</title>
   <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css">
   <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css">
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.7"></script>
+  <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
 </head>
+
 <body class="min-h-screen bg-base-300 text-base-content">
   <div class="navbar min-h-14 border-b border-base-300 bg-base-100 px-3 shadow-sm sm:px-4 lg:px-8">
-    <div class="flex-1">
-      <span class="text-lg font-bold sm:text-xl">Twitch Channels</span>
+    <div class="flex-1"><a class="text-lg font-bold sm:text-xl" href="/">Live chat</a></div>
+    <div th:if="${feed}" class="flex-none">
+      <span class="badge badge-primary badge-outline" th:text="${channel}">channel</span>
     </div>
   </div>
 
-  <main class="mx-auto max-w-5xl p-4 sm:p-6 lg:p-8">
-    <div class="mb-6">
-      <h1 class="text-2xl font-bold sm:text-3xl">Choose a channel</h1>
-      <p class="mt-2 opacity-70">Select a configured channel to open its live chat dashboard.</p>
-    </div>
+  <main class="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-3xl flex-col p-3 sm:p-6">
+    <section th:if="${!feed}" class="card m-auto w-full max-w-xl bg-base-100 shadow-xl">
+      <div class="card-body">
+        <h1 class="card-title text-2xl">Choose a channel</h1>
+        <p class="opacity-70">Select a configured channel to start the live chat feed.</p>
+        <form class="mt-4 flex flex-col gap-3 sm:flex-row" method="get" th:action="@{/c}">
+          <select class="select select-bordered min-w-0 flex-1" name="channel" required>
+            <option value="" disabled selected>Select a channel</option>
+            <option th:each="channelOption : ${channels}"
+                    th:value="${channelOption}"
+                    th:text="${channelOption}">channel</option>
+          </select>
+          <button class="btn btn-primary" type="submit">Start feed</button>
+        </form>
+      </div>
+    </section>
 
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <a th:each="channel : ${channels}"
-         th:href="@{/channel(channel=${channel})}"
-         th:attr="data-channel=${channel}"
-         class="card border border-base-300 bg-base-100 shadow transition hover:-translate-y-0.5 hover:border-primary hover:shadow-lg">
-        <div class="card-body">
-          <div class="flex items-center gap-3">
-            <span class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/15 text-primary">#</span>
-            <div>
-              <h2 class="card-title" th:text="${channel}">channel</h2>
-              <p class="text-sm opacity-60"><span data-total-messages>0</span> messages</p>
-            </div>
-          </div>
-          <div class="mt-4 grid gap-3">
-            <div>
-              <p class="mb-1 text-xs font-semibold uppercase opacity-60">Messages per minute · last hour</p>
-              <div class="messages-chart h-32 w-full"></div>
-            </div>
-          </div>
+    <section th:if="${feed}" class="card min-h-0 flex-1 bg-base-100 shadow-xl">
+      <div class="card-body min-h-0 gap-0 p-0">
+        <div class="flex items-center justify-between border-b border-base-300 px-4 py-3 sm:px-5 sm:py-4">
+          <h1 class="card-title text-lg">Live messages</h1>
+          <a class="btn btn-ghost btn-sm" th:href="@{/}">Change channel</a>
         </div>
-      </a>
-    </div>
+        <div class="min-h-0 flex-1" hx-ext="sse"
+             th:attr="sse-connect=@{/c/{channel}/events(channel=${channel})}">
+          <div id="messages" class="h-full max-h-[calc(100vh-9rem)] min-h-96 overflow-y-auto break-words p-2"
+               sse-swap="chat" hx-swap="beforeend"></div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <script>
-    function createChart(element, color) {
-      const chart = echarts.init(element);
-      chart.setOption({
-        animation: false,
-        grid: { top: 8, right: 8, bottom: 20, left: 32 },
-        xAxis: {
-          type: "time",
-          axisLabel: {
-            hideOverlap: true,
-            fontSize: 9,
-            formatter: value => new Date(value).toLocaleTimeString([], {
-              minute: "2-digit",
-              second: "2-digit"
-            })
-          },
-          axisLine: { lineStyle: { color: "#334155" } }
-        },
-        yAxis: {
-          type: "value",
-          minInterval: 1,
-          axisLabel: { fontSize: 9 },
-          splitLine: { lineStyle: { color: "#1e293b" } }
-        },
-        series: [{
-          type: "line",
-          smooth: true,
-          showSymbol: false,
-          lineStyle: { width: 2, color },
-          areaStyle: { opacity: 0.15, color },
-          data: []
-        }]
-      });
-      return chart;
-    }
-
-    async function refreshChart(path, channel, chart) {
-      const response = await fetch(`${path}?channel=${encodeURIComponent(channel)}`);
-      if (!response.ok) {
-        throw new Error(`Request failed: ${response.status}`);
+    document.body.addEventListener("htmx:afterSettle", event => {
+      const target = event.detail?.target || event.target;
+      if (target?.id === "messages") {
+        requestAnimationFrame(() => target.scrollTop = target.scrollHeight);
       }
-      const data = await response.json();
-      chart.setOption({
-        series: [{ data: data.map(point => [point.time, point.value]) }]
-      });
-    }
-
-    async function refreshTotalMessages(channel, element) {
-      const response = await fetch(`/api/stats/messages/total?channel=${encodeURIComponent(channel)}`);
-      if (!response.ok) {
-        throw new Error(`Request failed: ${response.status}`);
-      }
-      const data = await response.json();
-      element.textContent = Number(data[0]?.total ?? 0).toLocaleString();
-    }
-
-    document.querySelectorAll("[data-channel]").forEach(card => {
-      const channel = card.dataset.channel;
-      const messagesChart = createChart(card.querySelector(".messages-chart"), "#570df8");
-      const totalMessages = card.querySelector("[data-total-messages]");
-
-      function refresh() {
-        refreshChart("/api/stats/messages/hour", channel, messagesChart).catch(console.error);
-        refreshTotalMessages(channel, totalMessages).catch(console.error);
-      }
-
-      refresh();
-      setInterval(refresh, 60000);
-      window.addEventListener("resize", () => {
-        messagesChart.resize();
-      });
     });
   </script>
 </body>
+
 </html>
