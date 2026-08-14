@@ -15,17 +15,25 @@ public class Camel extends RouteBuilder {
   @Value("${app.twitch.max-messages:100000}")
   private int twitchMaxMessages;
 
+  @Value("${app.kick.delete-period:600000}")
+  private int kickDeletePeriod;
+
+  @Value("${app.twitch.delete-period:600000}")
+  private int twitchDeletePeriod;
+
   @Override
   public void configure() {
     routeTemplate(TWITCH_TEMPLATE_NAME)
         .templateParameter("channel")
         .from("twitch:{{channel}}?event=CHAT")
+        .log("Received twitch message: ${body}")
         .wireTap("seda:twitch-chat-insert")
         .wireTap("seda:twitch-chat-listener");
 
     routeTemplate(KICK_TEMPLATE_NAME)
         .templateParameter("channel")
         .from("kick:{{channel}}?event=CHAT")
+        .log("Received kick message: ${body}")
         .wireTap("seda:kick-chat-insert")
         .wireTap("seda:kick-chat-listener");
 
@@ -101,7 +109,7 @@ public class Camel extends RouteBuilder {
         .wireTap("seda:twitch-chat-embed")
         .log("Inserted twitch message: ${body[channel_name]} ${body[message_id]}");
 
-    from("seda:kick-chat-insert?concurrentConsumers=4")
+    from("seda:kick-chat-insert?concurrentConsumers=4&size=10000")
         .to("""
             sql:
               INSERT INTO kick_event_chat (
@@ -165,7 +173,7 @@ public class Camel extends RouteBuilder {
         .bean(Twitch.class, "publish")
         .log("Published twitch message to SEDA: ${body.channel.name} ${body.messageEvent.messageId}");
 
-    from("timer:twitch-chat-delete?period=60000")
+    from(String.format("timer:twitch-chat-delete?period=%d", Math.max(0, twitchDeletePeriod)))
         .setVariable("maxMessages").constant(Math.max(0, this.twitchMaxMessages))
         .to("""
             sql:
@@ -178,9 +186,9 @@ public class Camel extends RouteBuilder {
               )
             """)
         .log("Twitch retention plan: ${body}")
-        .log("Would delete twitch messages beyond the most recent ${variable.maxMessages}");
+        .log("Deleted beyond the most recent ${variable.maxMessages} twitch messages");
 
-    from("timer:kick-chat-delete?period=600000")
+    from(String.format("timer:kick-chat-delete?period=%d", Math.max(0, kickDeletePeriod)))
         .setVariable("maxMessages").constant(Math.max(0, this.kickMaxMessages))
         .to("""
             sql:
@@ -193,6 +201,6 @@ public class Camel extends RouteBuilder {
               )
             """)
         .log("Kick retention plan: ${body}")
-        .log("Would delete kick messages beyond the most recent ${variable.maxMessages}");
+        .log("Deleted beyond the most recent ${variable.maxMessages} kick messages");
   }
 }
