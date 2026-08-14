@@ -16,32 +16,32 @@
   <div class="navbar min-h-14 border-b border-base-300 bg-base-100 px-3 shadow-sm sm:px-4 lg:px-8">
     <div class="flex-1"><a class="text-lg font-bold sm:text-xl" href="/">Live chat</a></div>
     <div th:if="${feed}" class="flex-none">
-      <span class="badge badge-primary badge-outline" th:text="${channel}">channel</span>
+      <span class="badge badge-primary badge-outline rounded-sm" th:text="${channel}">channel</span>
     </div>
   </div>
 
   <main class="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-3xl flex-col p-3 sm:p-6">
-    <section th:if="${!feed}" class="card m-auto w-full max-w-xl bg-base-100 shadow-xl">
+    <section th:if="${!feed}" class="card m-auto w-full max-w-xl rounded-sm bg-base-100 shadow-xl">
       <div class="card-body">
         <h1 class="card-title text-2xl">Choose a channel</h1>
         <p class="opacity-70">Select a configured channel to start the live chat feed.</p>
         <form class="mt-4 flex flex-col gap-3 sm:flex-row" method="get" th:action="@{/c}">
-          <select class="select select-bordered min-w-0 flex-1" name="channel" required>
+          <select class="select select-bordered min-w-0 flex-1 rounded-sm" name="channel" required>
             <option value="" disabled selected>Select a channel</option>
             <option th:each="channelOption : ${channels}"
                     th:value="${channelOption}"
                     th:text="${channelOption}">channel</option>
           </select>
-          <button class="btn btn-primary" type="submit">Start feed</button>
+          <button class="btn btn-primary rounded-sm" type="submit">Start feed</button>
         </form>
       </div>
     </section>
 
-    <section th:if="${feed}" class="card min-h-0 flex-1 bg-base-100 shadow-xl">
+    <section th:if="${feed}" class="card min-h-0 flex-1 rounded-sm bg-base-100 shadow-xl">
       <div class="card-body min-h-0 gap-0 p-0">
         <div class="flex items-center justify-between border-b border-base-300 px-4 py-3 sm:px-5 sm:py-4">
           <h1 class="card-title text-lg">Live messages</h1>
-          <a class="btn btn-ghost btn-sm" th:href="@{/}">Change channel</a>
+          <a class="btn btn-ghost btn-sm rounded-sm" th:href="@{/}">Change channel</a>
         </div>
         <div class="min-h-0 flex-1" hx-ext="sse"
              th:attr="sse-connect=@{/c/{channel}/events(channel=${channel})}">

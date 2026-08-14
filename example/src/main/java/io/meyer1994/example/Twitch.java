@@ -14,13 +14,13 @@ import reactor.core.publisher.Flux;
 @Service
 public class Twitch {
     private static final String MESSAGE_TEMPLATE = """
-            <div class="chat chat-start py-0.5" title="%s">
+            <div class="chat chat-start rounded-sm py-0.5" title="%s">
               <div class="chat-header gap-1 text-xs leading-tight">
-                <span class="badge badge-secondary badge-xs">Twitch</span>
+                <span class="badge badge-secondary badge-xs rounded-sm">Twitch</span>
                 <span class="font-semibold">%s</span>
                 <time class="opacity-50" title="%s">%s</time>
               </div>
-              <div class="chat-bubble min-h-0 px-3 py-1.5 text-sm leading-tight">%s</div>
+              <div class="chat-bubble min-h-0 rounded-sm px-3 py-1.5 text-sm leading-tight">%s</div>
             </div>
             """.strip();
 
