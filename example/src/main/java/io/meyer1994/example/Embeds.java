@@ -20,10 +20,36 @@ public class Embeds {
   private static final String EMBEDDINGS_ENDPOINT =
       "openai:embeddings?embeddingModel=text-embedding-3-small";
 
+  // Short words, chat slang, gaming terms, memes, and pop-culture reactions.
+  // These are reference points rather than a complete sentiment lexicon.
   private static final List<String> GOOD_WORDS = List.of(
-      "good", "great", "excellent", "love", "awesome", "funny", "nice");
+      "good", "great", "excellent", "love", "awesome", "funny", "nice",
+      "amazing", "fantastic", "wonderful", "brilliant", "perfect", "best",
+      "favorite", "beautiful", "hilarious", "wholesome", "kind", "joyful",
+      "impressive", "incredible", "legendary", "iconic", "classic", "masterpiece",
+      "peak", "peak fiction", "absolute cinema", "cinema", "banger", "slaps",
+      "fire", "goated", "GOAT", "W", "common W", "dub", "massive W",
+      "based", "based take", "pog", "poggers", "pepeW", "5Head", "gigabrain",
+      "big brain", "clutch", "carry", "insane play", "well played", "GG", "GGs",
+      "victory", "level up", "power up", "critical hit", "let him cook",
+      "cooking", "chef's kiss", "fan favorite", "cult classic",
+      "hall of fame", "oscar worthy", "emmy worthy", "blockbuster", "main character",
+      "redemption arc", "happy ending", "heroic", "rizz", "W rizz", "slay",
+      "we are so back", "common sense", "based and correct");
   private static final List<String> BAD_WORDS = List.of(
-      "bad", "terrible", "awful", "hate", "stupid", "boring", "toxic");
+      "bad", "terrible", "awful", "hate", "stupid", "boring", "toxic",
+      "horrible", "worst", "disappointing", "disgusting", "annoying", "rude",
+      "dumb", "useless", "weak", "mediocre", "mid", "trash", "garbage",
+      "cringe", "embarrassing", "pathetic", "awful take", "bad take", "L",
+      "common L", "massive L", "L take", "ratio", "ratioed", "washed", "fraud",
+      "flop", "fell off", "choke", "throw", "threw", "inting", "griefing",
+      "skill issue", "uninstall", "get good", "touch grass", "bot", "NPC",
+      "clown", "yikes", "oof", "F", "RIP", "rip bozo", "cope", "copium",
+      "seethe", "salty", "salt", "mad", "angry", "delusional", "cursed",
+      "brain rot", "red flag", "villain arc", "bad ending", "plot hole",
+      "filler episode", "bad writing", "character assassination", "jumped the shark",
+      "box office bomb", "critical flop", "cancelled", "canceled", "toxic chat",
+      "rage quit", "hard throw", "unwatchable", "not canon", "season eight");
 
   private final ProducerTemplate producerTemplate;
   private final Map<Label, Map<String, List<Float>>> embeddings = new EnumMap<>(Label.class);

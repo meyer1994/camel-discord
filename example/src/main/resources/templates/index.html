@@ -153,14 +153,19 @@
     </th:block>
   </template>
 
-  <!-- Keep the newest message visible after an SSE append. -->
+  <!-- Keep the newest message visible after SSE appends and OOB updates. -->
   <script>
-    document.body.addEventListener("htmx:afterSettle", event => {
-      const target = event.detail?.target || event.target;
-      if (target?.id === "messages") {
-        requestAnimationFrame(() => target.scrollTop = target.scrollHeight);
-      }
-    });
+    const messages = document.getElementById("messages");
+    if (messages) {
+      const scrollToLatest = () => {
+        requestAnimationFrame(() => messages.scrollTop = messages.scrollHeight);
+      };
+
+      new MutationObserver(scrollToLatest).observe(messages, {
+        childList: true,
+        subtree: true
+      });
+    }
   </script>
 </body>
 
