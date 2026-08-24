@@ -22,6 +22,12 @@ public class Camel extends RouteBuilder {
   @Value("${app.twitch.delete-period:600000}")
   private int twitchDeletePeriod;
 
+  private final Embeds embeds;
+
+  public Camel(Embeds embeds) {
+    this.embeds = embeds;
+  }
+
   @Override
   public void configure() {
     routeTemplate(TWITCH_TEMPLATE_NAME)
@@ -149,8 +155,10 @@ public class Camel extends RouteBuilder {
             "Getting embedding for twitch message: ${variable:message_id} ${variable:channel_name}")
         .to("openai:embeddings?embeddingModel=text-embedding-3-small")
         .filter().simple("${size()} > 0")
+        .process(exchange -> exchange.setVariable(
+            "sentimentScore", embeds.score(exchange.getMessage().getBody())))
         .setVariable("embedding").simple("${body.toString()}")
-        .to("sql:UPDATE twitch_event_chat SET message_embeddings = :#embedding::vector WHERE id = :#id")
+        .to("sql:UPDATE twitch_event_chat SET message_embeddings = :#embedding::vector, sentiment_score = :#${variable.sentimentScore} WHERE id = :#id")
         .log("Updated twitch message: ${variable:message_id} ${variable:channel_name}");
 
     from("seda:kick-chat-embed?concurrentConsumers=16&size=10000")
@@ -162,9 +170,11 @@ public class Camel extends RouteBuilder {
             "Getting embedding for kick message: ${variable:message_id} ${variable:channel_name}")
         .to("openai:embeddings?embeddingModel=text-embedding-3-small")
         .filter().simple("${size()} > 0")
+        .process(exchange -> exchange.setVariable(
+            "sentimentScore", embeds.score(exchange.getMessage().getBody())))
         .setVariable("embedding").simple("${body.toString()}")
-        .to("sql:UPDATE twitch_event_chat SET message_embeddings = :#embedding::vector WHERE id = :#id")
-        .log("Updated twitch message: ${variable:message_id} ${variable:channel_name}");
+        .to("sql:UPDATE kick_event_chat SET message_embeddings = :#embedding::vector, sentiment_score = :#${variable.sentimentScore} WHERE id = :#id")
+        .log("Updated kick message: ${variable:message_id} ${variable:channel_name}");
 
     from("seda:kick-chat-listener?size=10000")
         .bean(Kick.class, "publish")
