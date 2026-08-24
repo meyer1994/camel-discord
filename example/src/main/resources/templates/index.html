@@ -54,6 +54,11 @@
       from { opacity: 0; }
       to { opacity: 1; }
     }
+
+    @keyframes score-in {
+      from { opacity: 0; transform: translateY(-2px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 
@@ -67,6 +72,11 @@
     </div>
     <div th:if="${feed}" class="flex items-center gap-3 text-xs tracking-wider">
       <span class="hidden text-slate-500 sm:inline">● ONLINE</span>
+      <label class="flex cursor-pointer items-center gap-1.5 text-[10px] text-slate-400" title="Automatically scroll to new messages">
+        <input id="auto-scroll-toggle" type="checkbox" checked
+               class="checkbox checkbox-xs rounded-none border-slate-600 bg-slate-800/40 checked:border-slate-400 checked:bg-slate-600">
+        AUTO_SCROLL
+      </label>
       <span class="badge badge-outline rounded-none border-slate-600 text-slate-400" th:text="|CH: ${channel}|">CH: channel</span>
     </div>
   </div>
@@ -165,22 +175,39 @@
     <!-- OOB fragment: replaces good/bad values and the message gradient in place. -->
     <th:block th:fragment="chat-score-update(goodId, goodScore, badId, badScore, gradientId, gradientClasses)">
       <span th:id="${goodId}" hx-swap-oob="outerHTML"
-            class="badge badge-outline badge-sm rounded-none border-green-900/60 bg-green-950/20 text-green-300/80"
+            class="badge badge-outline badge-sm rounded-none border-green-900/60 bg-green-950/20 text-green-300/80 animate-[score-in_400ms_ease-out]"
             th:title="|Good similarity: ${goodScore}|" th:text="|good: ${goodScore}|">good: 0</span>
       <span th:id="${badId}" hx-swap-oob="outerHTML"
-            class="badge badge-outline badge-sm rounded-none border-red-900/60 bg-red-950/20 text-red-300/80"
+            class="badge badge-outline badge-sm rounded-none border-red-900/60 bg-red-950/20 text-red-300/80 animate-[score-in_400ms_ease-out]"
             th:title="|Bad similarity: ${badScore}|" th:text="|bad: ${badScore}|">bad: 0</span>
       <div th:id="${gradientId}" hx-swap-oob="outerHTML" aria-hidden="true"
            th:class="${'pointer-events-none absolute inset-0 bg-gradient-to-r ' + gradientClasses + ' animate-[gradient-in_700ms_ease-out]'}"></div>
     </th:block>
   </template>
 
-  <!-- Keep the newest message visible after SSE appends and OOB updates. -->
+  <!-- Keep the newest message visible when auto-scrolling is enabled. -->
   <script>
     const messages = document.getElementById("messages");
-    if (messages) {
+    const autoScrollToggle = document.getElementById("auto-scroll-toggle");
+    const autoScrollKey = "live-chat:auto-scroll";
+
+    if (messages && autoScrollToggle) {
+      const savedAutoScroll = localStorage.getItem(autoScrollKey);
+      if (savedAutoScroll !== null) {
+        autoScrollToggle.checked = savedAutoScroll === "true";
+      }
+
+      autoScrollToggle.addEventListener("change", () => {
+        localStorage.setItem(autoScrollKey, String(autoScrollToggle.checked));
+        if (autoScrollToggle.checked) {
+          requestAnimationFrame(() => messages.scrollTop = messages.scrollHeight);
+        }
+      });
+
       const scrollToLatest = () => {
-        requestAnimationFrame(() => messages.scrollTop = messages.scrollHeight);
+        if (autoScrollToggle.checked) {
+          requestAnimationFrame(() => messages.scrollTop = messages.scrollHeight);
+        }
       };
 
       new MutationObserver(scrollToLatest).observe(messages, {

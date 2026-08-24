@@ -144,7 +144,7 @@ public class Camel extends RouteBuilder {
         .wireTap("seda:kick-chat-embed")
         .log("Inserted kick message: ${body[message_id]} ${body[channel_name]}");
 
-    from("seda:twitch-chat-embed?concurrentConsumers=32&size=10000")
+    from("seda:twitch-chat-embed?concurrentConsumers=64&size=10000")
         .setVariable("id").simple("${body[id]}")
         .setVariable("channel_name").simple("${body[channel_name]}")
         .setVariable("message_id").simple("${body[message_id]}")
@@ -165,7 +165,7 @@ public class Camel extends RouteBuilder {
         .to("sql:UPDATE twitch_event_chat SET message_embeddings = :#embedding::vector WHERE id = :#id")
         .log("Updated twitch message: ${variable:message_id} ${variable:channel_name}");
 
-    from("seda:kick-chat-embed?concurrentConsumers=32&size=10000")
+    from("seda:kick-chat-embed?concurrentConsumers=64&size=10000")
         .setVariable("id").simple("${body[id]}")
         .setVariable("channel_name").simple("${body[channel_name]}")
         .setVariable("message_id").simple("${body[message_id]}")
