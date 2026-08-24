@@ -2,6 +2,7 @@
 <html lang="en" data-theme="dark" xmlns:th="http://www.thymeleaf.org">
 
 <head>
+  <!-- Document metadata and client-side UI dependencies. -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title th:text="${feed} ? |Live chat - ${channel}| : 'Live chat'">Live chat</title>
@@ -10,6 +11,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <script src="https://unpkg.com/htmx.org@2.0.7"></script>
   <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
+  <!-- Neutral technical theme: grid background, panels, and header treatment. -->
   <style>
     :root { color-scheme: dark; }
 
@@ -34,6 +36,7 @@
 </head>
 
 <body class="tech-grid min-h-screen font-mono text-slate-200">
+  <!-- Global navigation and the active channel indicator. -->
   <div class="navbar min-h-14 border-b border-slate-800 bg-[#090d14]/95 px-3 sm:px-4 lg:px-8">
     <div class="flex-1">
       <a class="text-base font-bold tracking-widest text-slate-100 sm:text-lg" href="/">
@@ -46,7 +49,9 @@
     </div>
   </div>
 
+  <!-- Main application viewport: channel selection or the live feed. -->
   <main class="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-5xl flex-col p-3 sm:p-6 lg:p-8">
+    <!-- Landing state: choose one of the configured channels. -->
     <section th:if="${!feed}" class="tech-panel m-auto w-full max-w-xl rounded-none">
       <div class="border-b border-slate-700 px-5 py-3 text-xs tracking-[.25em] text-slate-400">
         CHANNEL_SELECT // INITIALIZE
@@ -66,8 +71,9 @@
       </div>
     </section>
 
-    <section th:if="${feed}" class="tech-panel min-h-0 flex-1 rounded-none">
-      <div class="min-h-0 flex-1">
+    <!-- Feed state: stream messages and scores into the active channel. -->
+    <section th:if="${feed}" class="tech-panel flex min-h-0 flex-1 flex-col rounded-none">
+      <div class="flex min-h-0 flex-1 flex-col">
         <div class="tech-panel-header flex items-center justify-between border-b border-slate-700/80 px-4 py-3 sm:px-5">
           <div>
             <div class="text-[10px] tracking-[.3em] text-slate-500">REALTIME_CHANNEL</div>
@@ -75,15 +81,79 @@
           </div>
           <a class="btn btn-ghost btn-sm rounded-none border border-slate-700 font-mono text-xs text-slate-400 hover:border-slate-500 hover:bg-slate-700/30 hover:text-slate-200" th:href="@{/}">CHANGE_CHANNEL</a>
         </div>
-        <div class="min-h-0 flex-1" hx-ext="sse"
+        <!-- SSE connection receives chat messages and OOB score updates. -->
+        <div class="flex min-h-0 flex-1 flex-col" hx-ext="sse"
              th:attr="sse-connect=@{/c/{channel}/events(channel=${channel})}">
-          <div id="messages" class="h-full max-h-[calc(100vh-9rem)] min-h-96 overflow-y-auto break-words p-3 sm:p-4"
+          <!-- Chat messages are appended here; score fragments replace children by ID. -->
+          <div id="messages" class="min-h-0 w-full flex-1 overflow-y-auto break-words p-0"
                sse-swap="chat" hx-swap="beforeend"></div>
         </div>
       </div>
     </section>
   </main>
 
+  <!-- Server-rendered fragments used as SSE payloads. The template remains inert in the page. -->
+  <template>
+    <!-- Complete message fragment, rendered when a chat event arrives. -->
+    <div th:fragment="chat-message(messageId, gradientId, source, username, title, goodId, badId, goodScore, badScore, timeTitle, timeText, message, gradientClasses)"
+         th:id="${messageId}" class="relative block w-full" th:title="${title}">
+      <!-- background gradient -->
+      <div th:id="${gradientId}" aria-hidden="true"
+           th:class="${goodScore == null or badScore == null
+             ? 'pointer-events-none absolute inset-0'
+             : 'pointer-events-none absolute inset-0 bg-gradient-to-r ' + gradientClasses}"></div>
+
+      <!-- content -->
+      <div class="relative z-10 flex w-full flex-col gap-2 p-2">
+        <!-- header -->
+        <div class="flex items-center justify-between text-sm">
+          <!-- left side -->
+          <div class="flex items-center gap-1">
+            <!-- source -->
+            <span th:class="${source == 'Twitch'
+                  ? 'badge badge-outline badge-sm rounded-none border-purple-900/60 bg-purple-950/20 text-purple-300/80'
+                  : 'badge badge-outline badge-sm rounded-none border-green-900/60 bg-green-950/20 text-green-300/80'}"
+                  th:title="|Source: ${source}|" th:text="${source}">Twitch</span>
+            <!-- username -->
+            <span class="max-w-[12ch] truncate font-semibold sm:max-w-none sm:overflow-visible sm:text-clip sm:whitespace-normal"
+                  th:title="|User: @${username}|" th:text="|@${username}|">@username</span>
+            <!-- good score -->
+            <span th:id="${goodId}" aria-live="polite"
+                  th:title="${goodScore == null ? 'Good similarity unavailable' : 'Good similarity: ' + goodScore}"
+                  th:text="${goodScore == null ? '' : 'good: ' + goodScore}"></span>
+            <!-- bad score -->
+            <span th:id="${badId}" aria-live="polite"
+                  th:title="${badScore == null ? 'Bad similarity unavailable' : 'Bad similarity: ' + badScore}"
+                  th:text="${badScore == null ? '' : 'bad: ' + badScore}"></span>
+          </div>
+
+          <!-- right side -->
+          <div>
+            <!-- time -->
+            <time th:title="${timeTitle}" th:text="${timeText}">00:00:00</time>
+          </div>
+        </div>
+
+        <!-- message -->
+        <div class="chat-bubble min-h-0 rounded-none border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-base leading-snug"
+             th:title="${message}" th:text="${message}">Message</div>
+      </div>
+    </div>
+
+    <!-- OOB fragment: replaces good/bad values and the message gradient in place. -->
+    <th:block th:fragment="chat-score-update(goodId, goodScore, badId, badScore, gradientId, gradientClasses)">
+      <span th:id="${goodId}" hx-swap-oob="outerHTML"
+            class="badge badge-outline badge-sm rounded-none border-green-900/60 bg-green-950/20 text-green-300/80"
+            th:title="|Good similarity: ${goodScore}|" th:text="|good: ${goodScore}|">good: 0</span>
+      <span th:id="${badId}" hx-swap-oob="outerHTML"
+            class="badge badge-outline badge-sm rounded-none border-red-900/60 bg-red-950/20 text-red-300/80"
+            th:title="|Bad similarity: ${badScore}|" th:text="|bad: ${badScore}|">bad: 0</span>
+      <div th:id="${gradientId}" hx-swap-oob="outerHTML" aria-hidden="true"
+           th:class="${'pointer-events-none absolute inset-0 bg-gradient-to-r ' + gradientClasses}"></div>
+    </th:block>
+  </template>
+
+  <!-- Keep the newest message visible after an SSE append. -->
   <script>
     document.body.addEventListener("htmx:afterSettle", event => {
       const target = event.detail?.target || event.target;

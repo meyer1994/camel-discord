@@ -155,10 +155,15 @@ public class Camel extends RouteBuilder {
             "Getting embedding for twitch message: ${variable:message_id} ${variable:channel_name}")
         .to("openai:embeddings?embeddingModel=text-embedding-3-small")
         .filter().simple("${size()} > 0")
-        .process(exchange -> exchange.setVariable(
-            "sentimentScore", embeds.score(exchange.getMessage().getBody())))
+        .process(exchange -> {
+          Embeds.Similarities similarities = embeds.similarities(exchange.getMessage().getBody());
+          if (similarities != null) {
+            exchange.setVariable("goodScore", similarities.good());
+            exchange.setVariable("badScore", similarities.bad());
+          }
+        })
         .setVariable("embedding").simple("${body.toString()}")
-        .to("sql:UPDATE twitch_event_chat SET message_embeddings = :#embedding::vector, sentiment_score = :#${variable.sentimentScore} WHERE id = :#id")
+        .to("sql:UPDATE twitch_event_chat SET message_embeddings = :#embedding::vector WHERE id = :#id")
         .bean(Twitch.class, "publishScore")
         .log("Updated twitch message: ${variable:message_id} ${variable:channel_name}");
 
@@ -171,10 +176,15 @@ public class Camel extends RouteBuilder {
             "Getting embedding for kick message: ${variable:message_id} ${variable:channel_name}")
         .to("openai:embeddings?embeddingModel=text-embedding-3-small")
         .filter().simple("${size()} > 0")
-        .process(exchange -> exchange.setVariable(
-            "sentimentScore", embeds.score(exchange.getMessage().getBody())))
+        .process(exchange -> {
+          Embeds.Similarities similarities = embeds.similarities(exchange.getMessage().getBody());
+          if (similarities != null) {
+            exchange.setVariable("goodScore", similarities.good());
+            exchange.setVariable("badScore", similarities.bad());
+          }
+        })
         .setVariable("embedding").simple("${body.toString()}")
-        .to("sql:UPDATE kick_event_chat SET message_embeddings = :#embedding::vector, sentiment_score = :#${variable.sentimentScore} WHERE id = :#id")
+        .to("sql:UPDATE kick_event_chat SET message_embeddings = :#embedding::vector WHERE id = :#id")
         .bean(Kick.class, "publishScore")
         .log("Updated kick message: ${variable:message_id} ${variable:channel_name}");
 

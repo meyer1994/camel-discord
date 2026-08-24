@@ -13,16 +13,12 @@ CREATE TABLE IF NOT EXISTS twitch_event_chat (
     display_name TEXT,
     message TEXT NOT NULL,
     message_embeddings VECTOR(1536),
-    sentiment_score INTEGER,
     subscriber_months INTEGER NOT NULL DEFAULT 0,
     subscription_tier INTEGER NOT NULL DEFAULT 0,
     nonce TEXT,
     raw_event JSONB NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-
-ALTER TABLE twitch_event_chat
-    ADD COLUMN IF NOT EXISTS sentiment_score INTEGER;
 
 CREATE INDEX IF NOT EXISTS idx_twitch_event_chat_channel_time
     ON twitch_event_chat (channel_name, event_time);
@@ -67,14 +63,10 @@ CREATE TABLE IF NOT EXISTS kick_event_chat (
     user_name TEXT,
     message TEXT NOT NULL,
     message_embeddings VECTOR(1536),
-    sentiment_score INTEGER,
     message_type TEXT NOT NULL,
     raw_event JSONB NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-
-ALTER TABLE kick_event_chat
-    ADD COLUMN IF NOT EXISTS sentiment_score INTEGER;
 
 CREATE INDEX IF NOT EXISTS idx_kick_event_chat_channel_time
     ON kick_event_chat (channel_name, event_time);

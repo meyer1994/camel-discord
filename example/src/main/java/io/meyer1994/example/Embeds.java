@@ -49,14 +49,12 @@ public class Embeds {
   }
 
   /**
-   * Scores an embedding against the closest good and bad reference embeddings.
-   * The result is a relative score where 0 is most bad, 100 is most good, and
-   * 50 means that both categories are equally similar.
+   * Compares an embedding with the closest good and bad reference embeddings.
    *
-   * @return a score from 0 to 100, or {@code null} until both reference sets
-   *         have been loaded
+   * @return good and bad similarity values from 0 to 100, or {@code null}
+   *         until both reference sets have been loaded
    */
-  public Integer score(Object value) {
+  public Similarities similarities(Object value) {
     Map<String, List<Float>> good = snapshot(Label.GOOD);
     Map<String, List<Float>> bad = snapshot(Label.BAD);
     if (good.isEmpty() || bad.isEmpty()) {
@@ -66,12 +64,12 @@ public class Embeds {
     List<Float> message = embedding(value);
     double goodSimilarity = toAffinity(maxCosineSimilarity(message, good));
     double badSimilarity = toAffinity(maxCosineSimilarity(message, bad));
-    double total = goodSimilarity + badSimilarity;
+    return new Similarities(
+        (int) Math.round(goodSimilarity * 100.0),
+        (int) Math.round(badSimilarity * 100.0));
+  }
 
-    if (total == 0.0) {
-      return 50;
-    }
-    return (int) Math.round(100.0 * goodSimilarity / total);
+  public record Similarities(int good, int bad) {
   }
 
   private synchronized void load(Label label, List<String> words) {
