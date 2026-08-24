@@ -32,6 +32,11 @@
     .tech-panel-header {
       background: linear-gradient(90deg, rgba(71, 85, 105, .14), transparent 55%);
     }
+
+    @keyframes gradient-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
   </style>
 </head>
 
@@ -50,7 +55,7 @@
   </div>
 
   <!-- Main application viewport: channel selection or the live feed. -->
-  <main class="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-5xl flex-col p-3 sm:p-6 lg:p-8">
+  <main class="mx-auto flex h-[calc(100vh-3.5rem)] min-h-[calc(100vh-3.5rem)] max-w-5xl flex-col overflow-hidden p-3 sm:p-6 lg:p-8">
     <!-- Landing state: choose one of the configured channels. -->
     <section th:if="${!feed}" class="tech-panel m-auto w-full max-w-xl rounded-none">
       <div class="border-b border-slate-700 px-5 py-3 text-xs tracking-[.25em] text-slate-400">
@@ -72,7 +77,7 @@
     </section>
 
     <!-- Feed state: stream messages and scores into the active channel. -->
-    <section th:if="${feed}" class="tech-panel flex min-h-0 flex-1 flex-col rounded-none">
+    <section th:if="${feed}" class="tech-panel flex min-h-0 flex-1 flex-col overflow-hidden rounded-none">
       <div class="flex min-h-0 flex-1 flex-col">
         <div class="tech-panel-header flex items-center justify-between border-b border-slate-700/80 px-4 py-3 sm:px-5">
           <div>
@@ -149,7 +154,7 @@
             class="badge badge-outline badge-sm rounded-none border-red-900/60 bg-red-950/20 text-red-300/80"
             th:title="|Bad similarity: ${badScore}|" th:text="|bad: ${badScore}|">bad: 0</span>
       <div th:id="${gradientId}" hx-swap-oob="outerHTML" aria-hidden="true"
-           th:class="${'pointer-events-none absolute inset-0 bg-gradient-to-r ' + gradientClasses}"></div>
+           th:class="${'pointer-events-none absolute inset-0 bg-gradient-to-r ' + gradientClasses + ' animate-[gradient-in_700ms_ease-out]'}"></div>
     </th:block>
   </template>
 
