@@ -10,42 +10,74 @@
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <script src="https://unpkg.com/htmx.org@2.0.7"></script>
   <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
+  <style>
+    :root { color-scheme: dark; }
+
+    .tech-grid {
+      background-color: #070a0f;
+      background-image:
+        linear-gradient(rgba(148, 163, 184, .035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, .035) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+
+    .tech-panel {
+      border: 1px solid rgba(71, 85, 105, .7);
+      background: rgba(9, 13, 20, .94);
+      box-shadow: 0 0 0 1px rgba(8, 145, 178, .06), 0 16px 50px rgba(0, 0, 0, .28);
+    }
+
+    .tech-panel-header {
+      background: linear-gradient(90deg, rgba(71, 85, 105, .14), transparent 55%);
+    }
+  </style>
 </head>
 
-<body class="min-h-screen bg-base-300 text-base-content">
-  <div class="navbar min-h-14 border-b border-base-300 bg-base-100 px-3 shadow-sm sm:px-4 lg:px-8">
-    <div class="flex-1"><a class="text-lg font-bold sm:text-xl" href="/">Live chat</a></div>
-    <div th:if="${feed}" class="flex-none">
-      <span class="badge badge-primary badge-outline rounded-sm" th:text="${channel}">channel</span>
+<body class="tech-grid min-h-screen font-mono text-slate-200">
+  <div class="navbar min-h-14 border-b border-slate-800 bg-[#090d14]/95 px-3 sm:px-4 lg:px-8">
+    <div class="flex-1">
+      <a class="text-base font-bold tracking-widest text-slate-100 sm:text-lg" href="/">
+        <span class="text-slate-500">&gt;</span> LIVE_CHAT
+      </a>
+    </div>
+    <div th:if="${feed}" class="flex items-center gap-3 text-xs tracking-wider">
+      <span class="hidden text-slate-500 sm:inline">● ONLINE</span>
+      <span class="badge badge-outline rounded-none border-slate-600 text-slate-400" th:text="|CH: ${channel}|">CH: channel</span>
     </div>
   </div>
 
-  <main class="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-3xl flex-col p-3 sm:p-6">
-    <section th:if="${!feed}" class="card m-auto w-full max-w-xl rounded-sm bg-base-100 shadow-xl">
-      <div class="card-body">
-        <h1 class="card-title text-2xl">Choose a channel</h1>
-        <p class="opacity-70">Select a configured channel to start the live chat feed.</p>
-        <form class="mt-4 flex flex-col gap-3 sm:flex-row" method="get" th:action="@{/c}">
-          <select class="select select-bordered min-w-0 flex-1 rounded-sm" name="channel" required>
+  <main class="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-5xl flex-col p-3 sm:p-6 lg:p-8">
+    <section th:if="${!feed}" class="tech-panel m-auto w-full max-w-xl rounded-none">
+      <div class="border-b border-slate-700 px-5 py-3 text-xs tracking-[.25em] text-slate-400">
+        CHANNEL_SELECT // INITIALIZE
+      </div>
+      <div class="p-5 sm:p-7">
+        <h1 class="text-2xl font-bold tracking-tight text-slate-100">Choose a channel</h1>
+        <p class="mt-2 text-sm text-slate-400">Select a configured channel to start the live chat feed.</p>
+        <form class="mt-6 flex flex-col gap-3 sm:flex-row" method="get" th:action="@{/c}">
+          <select class="select select-bordered min-w-0 flex-1 rounded-none border-slate-600 bg-[#0d131d] font-mono text-sm text-slate-200 focus:border-slate-400" name="channel" required>
             <option value="" disabled selected>Select a channel</option>
             <option th:each="channelOption : ${channels}"
                     th:value="${channelOption}"
                     th:text="${channelOption}">channel</option>
           </select>
-          <button class="btn btn-primary rounded-sm" type="submit">Start feed</button>
+          <button class="btn rounded-none border border-slate-600 bg-slate-800/30 font-mono text-slate-300 hover:border-slate-400 hover:bg-slate-700/40" type="submit">START_FEED</button>
         </form>
       </div>
     </section>
 
-    <section th:if="${feed}" class="card min-h-0 flex-1 rounded-sm bg-base-100 shadow-xl">
-      <div class="card-body min-h-0 gap-0 p-0">
-        <div class="flex items-center justify-between border-b border-base-300 px-4 py-3 sm:px-5 sm:py-4">
-          <h1 class="card-title text-lg">Live messages</h1>
-          <a class="btn btn-ghost btn-sm rounded-sm" th:href="@{/}">Change channel</a>
+    <section th:if="${feed}" class="tech-panel min-h-0 flex-1 rounded-none">
+      <div class="min-h-0 flex-1">
+        <div class="tech-panel-header flex items-center justify-between border-b border-slate-700/80 px-4 py-3 sm:px-5">
+          <div>
+            <div class="text-[10px] tracking-[.3em] text-slate-500">REALTIME_CHANNEL</div>
+            <h1 class="mt-1 text-sm font-bold tracking-wider text-slate-100 sm:text-base">LIVE_MESSAGES</h1>
+          </div>
+          <a class="btn btn-ghost btn-sm rounded-none border border-slate-700 font-mono text-xs text-slate-400 hover:border-slate-500 hover:bg-slate-700/30 hover:text-slate-200" th:href="@{/}">CHANGE_CHANNEL</a>
         </div>
         <div class="min-h-0 flex-1" hx-ext="sse"
              th:attr="sse-connect=@{/c/{channel}/events(channel=${channel})}">
-          <div id="messages" class="h-full max-h-[calc(100vh-9rem)] min-h-96 overflow-y-auto break-words p-2"
+          <div id="messages" class="h-full max-h-[calc(100vh-9rem)] min-h-96 overflow-y-auto break-words p-3 sm:p-4"
                sse-swap="chat" hx-swap="beforeend"></div>
         </div>
       </div>

@@ -15,19 +15,19 @@ import reactor.core.publisher.Flux;
 @Service
 public class Twitch {
     private static final String MESSAGE_TEMPLATE = """
-            <div id="%s" class="chat chat-start rounded-sm py-0.5" title="%s">
+            <div id="%s" class="chat chat-start py-1" title="%s">
               <div class="chat-header gap-1 text-xs leading-tight">
-                <span class="badge badge-secondary badge-xs rounded-sm">Twitch</span>
+                <span class="badge badge-outline badge-xs rounded-none border-slate-600 text-slate-400">Twitch</span>
                 <span class="font-semibold">%s</span>
-                <span id="%s" class="badge badge-primary badge-xs rounded-sm">score: …</span>
+                <span id="%s" class="badge badge-outline badge-xs rounded-none border-slate-600 bg-slate-800/40 text-slate-300">score: …</span>
                 <time class="opacity-50" title="%s">%s</time>
               </div>
-              <div class="chat-bubble min-h-0 rounded-sm px-3 py-1.5 text-sm leading-tight">%s</div>
+              <div class="chat-bubble min-h-0 rounded-none border border-slate-700/80 bg-[#0d131d] px-3 py-1.5 text-sm leading-tight">%s</div>
             </div>
             """.strip();
 
     private static final String SCORE_TEMPLATE = """
-            <span id="%s" hx-swap-oob="outerHTML" class="badge badge-primary badge-xs rounded-sm">score: %s</span>
+            <span id="%s" hx-swap-oob="outerHTML" class="badge badge-outline badge-xs rounded-none border-slate-600 bg-slate-800/40 text-slate-300">score: %s</span>
             """.strip();
 
     private static final DateTimeFormatter CHAT_TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss")
