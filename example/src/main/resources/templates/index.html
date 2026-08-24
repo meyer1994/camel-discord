@@ -5,7 +5,24 @@
   <!-- Document metadata and client-side UI dependencies. -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title th:text="${feed} ? |Live chat - ${channel}| : 'Live chat'">Live chat</title>
+  <title th:text="${feed} ? |LIVE_CHAT // ${channel}| : 'LIVE_CHAT'">LIVE_CHAT</title>
+  <meta name="description"
+        th:content="${feed} ? |Live chat feed for ${channel}.| : 'Live chat streams for Twitch and Kick channels.'">
+  <meta name="theme-color" content="#070a0f">
+
+  <!-- Open Graph metadata for link previews. -->
+  <meta property="og:site_name" content="LIVE_CHAT">
+  <meta property="og:type" content="website">
+  <meta property="og:title" th:content="${feed} ? |LIVE_CHAT // ${channel}| : 'LIVE_CHAT'">
+  <meta property="og:description"
+        th:content="${feed} ? |Live chat feed for ${channel}.| : 'Live chat streams for Twitch and Kick channels.'">
+
+  <!-- Twitter/X metadata for link previews. -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" th:content="${feed} ? |LIVE_CHAT // ${channel}| : 'LIVE_CHAT'">
+  <meta name="twitter:description"
+        th:content="${feed} ? |Live chat feed for ${channel}.| : 'Live chat streams for Twitch and Kick channels.'">
+
   <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css">
   <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css">
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
