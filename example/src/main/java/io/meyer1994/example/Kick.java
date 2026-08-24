@@ -16,14 +16,19 @@ import reactor.core.publisher.Flux;
 @Service
 public class Kick {
     private static final String MESSAGE_TEMPLATE = """
-            <div class="chat chat-start rounded-sm py-0.5" title="%s">
+            <div id="%s" class="chat chat-start rounded-sm py-0.5" title="%s">
               <div class="chat-header gap-1 text-xs leading-tight">
                 <span class="badge badge-info badge-xs rounded-sm">Kick</span>
                 <span class="font-semibold">%s</span>
+                <span id="%s" class="badge badge-primary badge-xs rounded-sm">score: …</span>
                 <time class="opacity-50" title="%s">%s</time>
               </div>
               <div class="chat-bubble min-h-0 rounded-sm px-3 py-1.5 text-sm leading-tight">%s</div>
             </div>
+            """.strip();
+
+    private static final String SCORE_TEMPLATE = """
+            <span id="%s" hx-swap-oob="outerHTML" class="badge badge-primary badge-xs rounded-sm">score: %s</span>
             """.strip();
 
     private static final DateTimeFormatter CHAT_TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss")
@@ -43,9 +48,12 @@ public class Kick {
         String timestampText = CHAT_TIME_FORMAT.format(timestamp);
         String timestampTitle = HtmlUtils.htmlEscape(timestamp.toString());
         String username = HtmlUtils.htmlEscape(message.sender().username());
+        String messageId = String.valueOf(message.id());
         String html = MESSAGE_TEMPLATE.formatted(
+                messageElementId(messageId),
                 timestampTitle,
                 username,
+                scoreElementId(messageId),
                 timestampTitle,
                 timestampText,
                 HtmlUtils.htmlEscape(message.content()));
@@ -55,6 +63,30 @@ public class Kick {
                 .id("kick:" + message.id())
                 .build();
         topics.publish(channel, event);
+    }
+
+    public void publishScore(Exchange exchange) {
+        String channel = exchange.getVariable("channel_name", String.class);
+        String messageId = exchange.getVariable("message_id", String.class);
+        Integer score = exchange.getVariable("sentimentScore", Integer.class);
+        if (channel == null || messageId == null || score == null) {
+            return;
+        }
+
+        String html = SCORE_TEMPLATE.formatted(scoreElementId(messageId), score);
+        ServerSentEvent<String> event = ServerSentEvent.<String>builder(html)
+                .event("chat")
+                .id("kick-score:" + messageId)
+                .build();
+        topics.publish(channel, event);
+    }
+
+    private static String messageElementId(String messageId) {
+        return "message-kick-" + HtmlUtils.htmlEscape(messageId);
+    }
+
+    private static String scoreElementId(String messageId) {
+        return "score-kick-" + HtmlUtils.htmlEscape(messageId);
     }
 
     private static Instant timestamp(String createdAt) {

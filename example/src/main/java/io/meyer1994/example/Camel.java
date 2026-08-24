@@ -34,15 +34,15 @@ public class Camel extends RouteBuilder {
         .templateParameter("channel")
         .from("twitch:{{channel}}?event=CHAT")
         .log(LoggingLevel.DEBUG, "Received twitch message: ${body}")
-        .wireTap("seda:twitch-chat-insert")
-        .wireTap("seda:twitch-chat-listener");
+        .to("direct:twitch-chat-listener")
+        .wireTap("seda:twitch-chat-insert");
 
     routeTemplate(KICK_TEMPLATE_NAME)
         .templateParameter("channel")
         .from("kick:{{channel}}?event=CHAT")
         .log(LoggingLevel.DEBUG, "Received kick message: ${body}")
-        .wireTap("seda:kick-chat-insert")
-        .wireTap("seda:kick-chat-listener");
+        .to("direct:kick-chat-listener")
+        .wireTap("seda:kick-chat-insert");
 
     from("seda:twitch-chat-insert?concurrentConsumers=4&size=10000")
         .to("""
@@ -159,6 +159,7 @@ public class Camel extends RouteBuilder {
             "sentimentScore", embeds.score(exchange.getMessage().getBody())))
         .setVariable("embedding").simple("${body.toString()}")
         .to("sql:UPDATE twitch_event_chat SET message_embeddings = :#embedding::vector, sentiment_score = :#${variable.sentimentScore} WHERE id = :#id")
+        .bean(Twitch.class, "publishScore")
         .log("Updated twitch message: ${variable:message_id} ${variable:channel_name}");
 
     from("seda:kick-chat-embed?concurrentConsumers=16&size=10000")
@@ -174,15 +175,16 @@ public class Camel extends RouteBuilder {
             "sentimentScore", embeds.score(exchange.getMessage().getBody())))
         .setVariable("embedding").simple("${body.toString()}")
         .to("sql:UPDATE kick_event_chat SET message_embeddings = :#embedding::vector, sentiment_score = :#${variable.sentimentScore} WHERE id = :#id")
+        .bean(Kick.class, "publishScore")
         .log("Updated kick message: ${variable:message_id} ${variable:channel_name}");
 
-    from("seda:kick-chat-listener?size=10000")
+    from("direct:kick-chat-listener")
         .bean(Kick.class, "publish")
-        .log("Published kick message to SEDA: ${headers['x-camel-kick-channel-name']} ${body.id}");
+        .log("Published kick message: ${headers['x-camel-kick-channel-name']} ${body.id}");
 
-    from("seda:twitch-chat-listener?size=10000")
+    from("direct:twitch-chat-listener")
         .bean(Twitch.class, "publish")
-        .log("Published twitch message to SEDA: ${body.channel.name} ${body.messageEvent.messageId}");
+        .log("Published twitch message: ${body.channel.name} ${body.messageEvent.messageId}");
 
     from(String.format("timer:twitch-chat-delete?period=%d", Math.max(0, twitchDeletePeriod)))
         .setVariable("maxMessages").constant(Math.max(0, this.twitchMaxMessages))
