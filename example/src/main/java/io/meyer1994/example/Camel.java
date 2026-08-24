@@ -34,17 +34,15 @@ public class Camel extends RouteBuilder {
         .templateParameter("channel")
         .from("twitch:{{channel}}?event=CHAT")
         .log(LoggingLevel.DEBUG, "Received twitch message: ${body}")
-        .to("direct:twitch-chat-listener")
-        .wireTap("seda:twitch-chat-insert");
+        .wireTap("seda:twitch-chat-listener");
 
     routeTemplate(KICK_TEMPLATE_NAME)
         .templateParameter("channel")
         .from("kick:{{channel}}?event=CHAT")
         .log(LoggingLevel.DEBUG, "Received kick message: ${body}")
-        .to("direct:kick-chat-listener")
-        .wireTap("seda:kick-chat-insert");
+        .wireTap("seda:kick-chat-listener");
 
-    from("seda:twitch-chat-insert?concurrentConsumers=4&size=10000")
+    from("seda:twitch-chat-insert?concurrentConsumers=32&size=10000")
         .to("""
             sql:
               INSERT INTO twitch_event_chat (
@@ -116,7 +114,7 @@ public class Camel extends RouteBuilder {
         .wireTap("seda:twitch-chat-embed")
         .log("Inserted twitch message: ${body[channel_name]} ${body[message_id]}");
 
-    from("seda:kick-chat-insert?concurrentConsumers=4&size=10000")
+    from("seda:kick-chat-insert?concurrentConsumers=32&size=10000")
         .to("""
             sql:
               INSERT INTO kick_event_chat (
@@ -146,7 +144,7 @@ public class Camel extends RouteBuilder {
         .wireTap("seda:kick-chat-embed")
         .log("Inserted kick message: ${body[message_id]} ${body[channel_name]}");
 
-    from("seda:twitch-chat-embed?concurrentConsumers=16&size=10000")
+    from("seda:twitch-chat-embed?concurrentConsumers=32&size=10000")
         .setVariable("id").simple("${body[id]}")
         .setVariable("channel_name").simple("${body[channel_name]}")
         .setVariable("message_id").simple("${body[message_id]}")
@@ -163,11 +161,11 @@ public class Camel extends RouteBuilder {
           }
         })
         .setVariable("embedding").simple("${body.toString()}")
-        .to("sql:UPDATE twitch_event_chat SET message_embeddings = :#embedding::vector WHERE id = :#id")
         .bean(Twitch.class, "publishScore")
+        .to("sql:UPDATE twitch_event_chat SET message_embeddings = :#embedding::vector WHERE id = :#id")
         .log("Updated twitch message: ${variable:message_id} ${variable:channel_name}");
 
-    from("seda:kick-chat-embed?concurrentConsumers=16&size=10000")
+    from("seda:kick-chat-embed?concurrentConsumers=32&size=10000")
         .setVariable("id").simple("${body[id]}")
         .setVariable("channel_name").simple("${body[channel_name]}")
         .setVariable("message_id").simple("${body[message_id]}")
@@ -184,16 +182,18 @@ public class Camel extends RouteBuilder {
           }
         })
         .setVariable("embedding").simple("${body.toString()}")
-        .to("sql:UPDATE kick_event_chat SET message_embeddings = :#embedding::vector WHERE id = :#id")
         .bean(Kick.class, "publishScore")
+        .to("sql:UPDATE kick_event_chat SET message_embeddings = :#embedding::vector WHERE id = :#id")
         .log("Updated kick message: ${variable:message_id} ${variable:channel_name}");
 
-    from("direct:kick-chat-listener")
+    from("seda:kick-chat-listener?concurrentConsumers=1&size=10000")
         .bean(Kick.class, "publish")
+        .wireTap("seda:kick-chat-insert")
         .log("Published kick message: ${headers['x-camel-kick-channel-name']} ${body.id}");
 
-    from("direct:twitch-chat-listener")
+    from("seda:twitch-chat-listener?concurrentConsumers=1&size=10000")
         .bean(Twitch.class, "publish")
+        .wireTap("seda:twitch-chat-insert")
         .log("Published twitch message: ${body.channel.name} ${body.messageEvent.messageId}");
 
     from(String.format("timer:twitch-chat-delete?period=%d", Math.max(0, twitchDeletePeriod)))
