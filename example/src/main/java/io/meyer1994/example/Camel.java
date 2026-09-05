@@ -22,12 +22,6 @@ public class Camel extends RouteBuilder {
   @Value("${app.twitch.delete-period:600000}")
   private int twitchDeletePeriod;
 
-  private final Embeds embeds;
-
-  public Camel(Embeds embeds) {
-    this.embeds = embeds;
-  }
-
   @Override
   public void configure() {
     routeTemplate(TWITCH_TEMPLATE_NAME)
@@ -42,6 +36,27 @@ public class Camel extends RouteBuilder {
         .log(LoggingLevel.DEBUG, "Received kick message: ${body}")
         .wireTap("seda:kick-chat-listener");
 
+    /**
+     * Listen for kick chat messages and insert them into the database.
+     */
+    from("seda:kick-chat-listener?concurrentConsumers=1&size=10000")
+        .bean(Kick.class, "publish")
+        .wireTap("seda:kick-chat-insert")
+        .log("Published kick message: ${headers['x-camel-kick-channel-name']} ${body.id}");
+
+    /**
+     * Listen for twitch chat messages and insert them into the database.
+     */
+    from("seda:twitch-chat-listener?concurrentConsumers=1&size=10000")
+        .bean(Twitch.class, "publish")
+        .wireTap("seda:twitch-chat-insert")
+        .log("Published twitch message: ${body.channel.name} ${body.messageEvent.messageId}");
+
+    /**
+     * Insert twitch chat messages into the database.
+     * 
+     * Sends to the twitch-chat-embed seda queue.
+     */
     from("seda:twitch-chat-insert?concurrentConsumers=32&size=10000")
         .to("""
             sql:
@@ -114,6 +129,11 @@ public class Camel extends RouteBuilder {
         .wireTap("seda:twitch-chat-embed")
         .log("Inserted twitch message: ${body[channel_name]} ${body[message_id]}");
 
+    /**
+     * Insert kick chat messages into the database.
+     * 
+     * Sends to the kick-chat-embed seda queue.
+     */
     from("seda:kick-chat-insert?concurrentConsumers=32&size=10000")
         .to("""
             sql:
@@ -144,58 +164,43 @@ public class Camel extends RouteBuilder {
         .wireTap("seda:kick-chat-embed")
         .log("Inserted kick message: ${body[message_id]} ${body[channel_name]}");
 
+    /**
+     * Embed twitch chat messages and update the database.
+     * 
+     * Sends to the twitch-chat-score seda queue.
+     */
     from("seda:twitch-chat-embed?concurrentConsumers=64&size=10000")
         .setVariable("id").simple("${body[id]}")
         .setVariable("channel_name").simple("${body[channel_name]}")
         .setVariable("message_id").simple("${body[message_id]}")
         .setVariable("message").simple("${body[message]}")
-        .log(
-            "Getting embedding for twitch message: ${variable:message_id} ${variable:channel_name}")
+        .log("Getting embedding for twitch message: ${variable:message_id} ${variable:channel_name}")
         .to("openai:embeddings?embeddingModel=text-embedding-3-small")
         .filter().simple("${size()} > 0")
-        .process(exchange -> {
-          Embeds.Similarities similarities = embeds.similarities(exchange.getMessage().getBody());
-          if (similarities != null) {
-            exchange.setVariable("goodScore", similarities.good());
-            exchange.setVariable("badScore", similarities.bad());
-          }
-        })
         .setVariable("embedding").simple("${body.toString()}")
-        .bean(Twitch.class, "publishScore")
         .to("sql:UPDATE twitch_event_chat SET message_embeddings = :#embedding::vector WHERE id = :#id")
         .log("Updated twitch message: ${variable:message_id} ${variable:channel_name}");
 
+    /**
+     * Embed kick chat messages and update the database.
+     * 
+     * Sends to the kick-chat-score seda queue.
+     */
     from("seda:kick-chat-embed?concurrentConsumers=64&size=10000")
         .setVariable("id").simple("${body[id]}")
         .setVariable("channel_name").simple("${body[channel_name]}")
         .setVariable("message_id").simple("${body[message_id]}")
         .setVariable("message").simple("${body[message]}")
-        .log(
-            "Getting embedding for kick message: ${variable:message_id} ${variable:channel_name}")
+        .log("Getting embedding for kick message: ${variable:message_id} ${variable:channel_name}")
         .to("openai:embeddings?embeddingModel=text-embedding-3-small")
         .filter().simple("${size()} > 0")
-        .process(exchange -> {
-          Embeds.Similarities similarities = embeds.similarities(exchange.getMessage().getBody());
-          if (similarities != null) {
-            exchange.setVariable("goodScore", similarities.good());
-            exchange.setVariable("badScore", similarities.bad());
-          }
-        })
         .setVariable("embedding").simple("${body.toString()}")
-        .bean(Kick.class, "publishScore")
         .to("sql:UPDATE kick_event_chat SET message_embeddings = :#embedding::vector WHERE id = :#id")
         .log("Updated kick message: ${variable:message_id} ${variable:channel_name}");
 
-    from("seda:kick-chat-listener?concurrentConsumers=1&size=10000")
-        .bean(Kick.class, "publish")
-        .wireTap("seda:kick-chat-insert")
-        .log("Published kick message: ${headers['x-camel-kick-channel-name']} ${body.id}");
-
-    from("seda:twitch-chat-listener?concurrentConsumers=1&size=10000")
-        .bean(Twitch.class, "publish")
-        .wireTap("seda:twitch-chat-insert")
-        .log("Published twitch message: ${body.channel.name} ${body.messageEvent.messageId}");
-
+    /**
+     * Delete twitch chat messages from the database.
+     */
     from(String.format("timer:twitch-chat-delete?period=%d", Math.max(0, twitchDeletePeriod)))
         .setVariable("maxMessages").constant(Math.max(0, this.twitchMaxMessages))
         .to("""
@@ -211,6 +216,9 @@ public class Camel extends RouteBuilder {
         .log("Twitch retention plan: ${body}")
         .log("Deleted beyond the most recent ${variable.maxMessages} twitch messages");
 
+    /**
+     * Delete kick chat messages from the database.
+     */
     from(String.format("timer:kick-chat-delete?period=%d", Math.max(0, kickDeletePeriod)))
         .setVariable("maxMessages").constant(Math.max(0, this.kickMaxMessages))
         .to("""

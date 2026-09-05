@@ -2,220 +2,102 @@
 <html lang="en" data-theme="dark" xmlns:th="http://www.thymeleaf.org">
 
 <head>
-  <!-- Document metadata and client-side UI dependencies. -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title th:text="${feed} ? |LIVE_CHAT // ${channel}| : 'LIVE_CHAT'">LIVE_CHAT</title>
   <meta name="description"
         th:content="${feed} ? |Live chat feed for ${channel}.| : 'Live chat streams for Twitch and Kick channels.'">
-  <meta name="theme-color" content="#070a0f">
-
-  <!-- Open Graph metadata for link previews. -->
-  <meta property="og:site_name" content="LIVE_CHAT">
-  <meta property="og:type" content="website">
-  <meta property="og:title" th:content="${feed} ? |LIVE_CHAT // ${channel}| : 'LIVE_CHAT'">
-  <meta property="og:description"
-        th:content="${feed} ? |Live chat feed for ${channel}.| : 'Live chat streams for Twitch and Kick channels.'">
-
-  <!-- Twitter/X metadata for link previews. -->
-  <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" th:content="${feed} ? |LIVE_CHAT // ${channel}| : 'LIVE_CHAT'">
-  <meta name="twitter:description"
-        th:content="${feed} ? |Live chat feed for ${channel}.| : 'Live chat streams for Twitch and Kick channels.'">
 
   <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css">
-  <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css">
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <script src="https://unpkg.com/htmx.org@2.0.7"></script>
   <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
-  <!-- Neutral technical theme: grid background, panels, and header treatment. -->
-  <style>
-    :root { color-scheme: dark; }
-
-    .tech-grid {
-      background-color: #070a0f;
-      background-image:
-        linear-gradient(rgba(148, 163, 184, .035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(148, 163, 184, .035) 1px, transparent 1px);
-      background-size: 24px 24px;
-    }
-
-    .tech-panel {
-      border: 1px solid rgba(71, 85, 105, .7);
-      background: rgba(9, 13, 20, .94);
-      box-shadow: 0 0 0 1px rgba(8, 145, 178, .06), 0 16px 50px rgba(0, 0, 0, .28);
-    }
-
-    .tech-panel-header {
-      background: linear-gradient(90deg, rgba(71, 85, 105, .14), transparent 55%);
-    }
-
-    @keyframes gradient-in {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-
-    @keyframes score-in {
-      from { opacity: 0; transform: translateY(-2px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  </style>
 </head>
 
-<body class="tech-grid min-h-screen font-mono text-slate-200">
-  <!-- Global navigation and the active channel indicator. -->
-  <div class="navbar min-h-14 border-b border-slate-800 bg-[#090d14]/95 px-3 sm:px-4 lg:px-8">
+<body class="bg-base-100 min-h-screen">
+  <div class="navbar bg-base-200 shadow-sm px-4">
     <div class="flex-1">
-      <a class="text-base font-bold tracking-widest text-slate-100 sm:text-lg" href="/">
-        <span class="text-slate-500">&gt;</span> LIVE_CHAT
-      </a>
+      <a class="btn btn-ghost text-xl font-bold" href="/">LIVE_CHAT</a>
     </div>
-    <div th:if="${feed}" class="flex items-center gap-3 text-xs tracking-wider">
-      <span class="hidden text-slate-500 sm:inline">● ONLINE</span>
-      <label class="flex cursor-pointer items-center gap-1.5 text-[10px] text-slate-400" title="Automatically scroll to new messages">
-        <input id="auto-scroll-toggle" type="checkbox" checked
-               class="checkbox checkbox-xs rounded-none border-slate-600 bg-slate-800/40 checked:border-slate-400 checked:bg-slate-600">
-        AUTO_SCROLL
-      </label>
-      <span class="badge badge-outline rounded-none border-slate-600 text-slate-400" th:text="|CH: ${channel}|">CH: channel</span>
+    <div th:if="${feed}" class="flex items-center gap-3">
+      <span class="badge badge-success">ONLINE</span>
+      <span class="badge badge-outline" th:text="|CH: ${channel}|">CH: channel</span>
     </div>
   </div>
 
-  <!-- Main application viewport: channel selection or the live feed. -->
-  <main class="mx-auto flex h-[calc(100vh-3.5rem)] min-h-[calc(100vh-3.5rem)] max-w-5xl flex-col overflow-hidden p-3 sm:p-6 lg:p-8">
-    <!-- Landing state: choose one of the configured channels. -->
-    <section th:if="${!feed}" class="tech-panel m-auto w-full max-w-xl rounded-none">
-      <div class="border-b border-slate-700 px-5 py-3 text-xs tracking-[.25em] text-slate-400">
-        CHANNEL_SELECT // INITIALIZE
-      </div>
-      <div class="p-5 sm:p-7">
-        <h1 class="text-2xl font-bold tracking-tight text-slate-100">Choose a channel</h1>
-        <p class="mt-2 text-sm text-slate-400">Select a configured channel to start the live chat feed.</p>
-        <form class="mt-6 flex flex-col gap-3 sm:flex-row" method="get" th:action="@{/c}">
-          <select class="select select-bordered min-w-0 flex-1 rounded-none border-slate-600 bg-[#0d131d] font-mono text-sm text-slate-200 focus:border-slate-400" name="channel" required>
+  <main class="p-4 max-w-3xl mx-auto">
+    <!-- Landing state -->
+    <section th:if="${!feed}" class="card bg-base-200 shadow-xl mt-8">
+      <div class="card-body items-center text-center">
+        <h1 class="card-title text-2xl">Choose a channel</h1>
+        <p class="text-base-content/70">Select a configured channel to start the live chat feed.</p>
+        <form class="flex flex-col sm:flex-row gap-2 w-full max-w-md mt-4" method="get" th:action="@{/c}">
+          <select class="select select-bordered flex-1" name="channel" required>
             <option value="" disabled selected>Select a channel</option>
             <option th:each="channelOption : ${channels}"
                     th:value="${channelOption}"
                     th:text="${channelOption}">channel</option>
           </select>
-          <button class="btn rounded-none border border-slate-600 bg-slate-800/30 font-mono text-slate-300 hover:border-slate-400 hover:bg-slate-700/40" type="submit">START_FEED</button>
+          <button class="btn btn-primary" type="submit">START_FEED</button>
         </form>
       </div>
     </section>
 
-    <!-- Feed state: stream messages and scores into the active channel. -->
-    <section th:if="${feed}" class="tech-panel flex min-h-0 flex-1 flex-col overflow-hidden rounded-none">
-      <div class="flex min-h-0 flex-1 flex-col">
-        <div class="tech-panel-header flex items-center justify-between border-b border-slate-700/80 px-4 py-3 sm:px-5">
-          <div>
-            <div class="text-[10px] tracking-[.3em] text-slate-500">REALTIME_CHANNEL</div>
-            <h1 class="mt-1 text-sm font-bold tracking-wider text-slate-100 sm:text-base">LIVE_MESSAGES</h1>
-          </div>
-          <a class="btn btn-ghost btn-sm rounded-none border border-slate-700 font-mono text-xs text-slate-400 hover:border-slate-500 hover:bg-slate-700/30 hover:text-slate-200" th:href="@{/}">CHANGE_CHANNEL</a>
+    <!-- Feed state -->
+    <section th:if="${feed}" class="mt-4">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <div class="text-xs text-base-content/50 uppercase tracking-wider">Realtime</div>
+          <h1 class="text-lg font-bold">LIVE_MESSAGES</h1>
         </div>
-        <!-- SSE connection receives chat messages and OOB score updates. -->
-        <div class="flex min-h-0 flex-1 flex-col" hx-ext="sse"
-             th:attr="sse-connect=@{/c/{channel}/events(channel=${channel})}">
-          <!-- Chat messages are appended here; score fragments replace children by ID. -->
-          <div id="messages" class="min-h-0 w-full flex-1 overflow-y-auto break-words p-0"
-               sse-swap="chat" hx-swap="beforeend"></div>
+        <a class="btn btn-sm btn-ghost" th:href="@{/}">Change channel</a>
+      </div>
+      <div class="card bg-base-200 shadow">
+        <div class="card-body p-0">
+          <div class="h-[60vh] overflow-y-auto p-4 space-y-2"
+               hx-ext="sse"
+               th:attr="sse-connect=@{/c/{channel}/events(channel=${channel})}">
+            <div id="messages" sse-swap="chat" hx-swap="beforeend scroll:bottom"></div>
+          </div>
         </div>
       </div>
     </section>
   </main>
 
-  <!-- Server-rendered fragments used as SSE payloads. The template remains inert in the page. -->
+  <!-- Template fragments for SSE payloads -->
   <template>
-    <!-- Complete message fragment, rendered when a chat event arrives. -->
+    <!-- Complete message fragment -->
     <div th:fragment="chat-message(messageId, gradientId, source, username, title, goodId, badId, goodScore, badScore, timeTitle, timeText, message, gradientClasses)"
-         th:id="${messageId}" class="relative block w-full" th:title="${title}">
-      <!-- background gradient -->
-      <div th:id="${gradientId}" aria-hidden="true"
-           th:class="${goodScore == null or badScore == null
-             ? 'pointer-events-none absolute inset-0'
-             : 'pointer-events-none absolute inset-0 bg-gradient-to-r ' + gradientClasses}"></div>
+         th:id="${messageId}" th:title="${title}"
+         class="chat chat-start">
+      <div th:id="${gradientId}" aria-hidden="true"></div>
 
-      <!-- content -->
-      <div class="relative z-10 flex w-full flex-col gap-2 p-2">
-        <!-- header -->
-        <div class="flex items-center justify-between text-sm">
-          <!-- left side -->
-          <div class="flex items-center gap-1">
-            <!-- source -->
-            <span th:class="${source == 'Twitch'
-                  ? 'badge badge-outline badge-sm rounded-none border-purple-900/60 bg-purple-950/20 text-purple-300/80'
-                  : 'badge badge-outline badge-sm rounded-none border-green-900/60 bg-green-950/20 text-green-300/80'}"
-                  th:title="|Source: ${source}|" th:text="${source}">Twitch</span>
-            <!-- username -->
-            <span class="max-w-[12ch] truncate font-semibold sm:max-w-none sm:overflow-visible sm:text-clip sm:whitespace-normal"
-                  th:title="|User: @${username}|" th:text="|@${username}|">@username</span>
-            <!-- good score -->
-            <span th:id="${goodId}" aria-live="polite"
-                  th:title="${goodScore == null ? 'Good similarity unavailable' : 'Good similarity: ' + goodScore}"
-                  th:text="${goodScore == null ? '' : 'good: ' + goodScore}"></span>
-            <!-- bad score -->
-            <span th:id="${badId}" aria-live="polite"
-                  th:title="${badScore == null ? 'Bad similarity unavailable' : 'Bad similarity: ' + badScore}"
-                  th:text="${badScore == null ? '' : 'bad: ' + badScore}"></span>
-          </div>
-
-          <!-- right side -->
-          <div>
-            <!-- time -->
-            <time th:title="${timeTitle}" th:text="${timeText}">00:00:00</time>
-          </div>
-        </div>
-
-        <!-- message -->
-        <div class="chat-bubble min-h-0 rounded-none border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-base leading-snug"
-             th:title="${message}" th:text="${message}">Message</div>
+      <div class="chat-header flex items-center gap-1 justify-center">
+        <span class="badge badge-sm"
+              th:classappend="${source == 'Twitch'} ? 'badge-primary' : 'badge-secondary'"
+              th:title="|Source: ${source}|" th:text="${source}">source</span>
+        <span class="font-semibold" th:title="|User: @${username}|" th:text="|@${username}|">@username</span>
+        <span th:id="${goodId}" aria-live="polite" class="badge badge-sm badge-success"
+              th:title="${goodScore == null ? 'Good similarity unavailable' : 'Good similarity: ' + goodScore}"
+              th:text="${goodScore == null ? '' : goodScore}">-</span>
+        <span th:id="${badId}" aria-live="polite" class="badge badge-sm badge-error"
+              th:title="${badScore == null ? 'Bad similarity unavailable' : 'Bad similarity: ' + badScore}"
+              th:text="${badScore == null ? '' : badScore}">-</span>
+        <time class="text-xs text-base-content/50" th:title="${timeTitle}" th:text="${timeText}">00:00:00</time>
       </div>
+
+      <div class="chat-bubble" th:title="${message}" th:text="${message}">Message</div>
     </div>
 
-    <!-- OOB fragment: replaces good/bad values and the message gradient in place. -->
+    <!-- OOB score update fragment -->
     <th:block th:fragment="chat-score-update(goodId, goodScore, badId, badScore, gradientId, gradientClasses)">
-      <span th:id="${goodId}" hx-swap-oob="outerHTML"
-            class="badge badge-outline badge-sm rounded-none border-green-900/60 bg-green-950/20 text-green-300/80 animate-[score-in_400ms_ease-out]"
-            th:title="|Good similarity: ${goodScore}|" th:text="|good: ${goodScore}|">good: 0</span>
-      <span th:id="${badId}" hx-swap-oob="outerHTML"
-            class="badge badge-outline badge-sm rounded-none border-red-900/60 bg-red-950/20 text-red-300/80 animate-[score-in_400ms_ease-out]"
-            th:title="|Bad similarity: ${badScore}|" th:text="|bad: ${badScore}|">bad: 0</span>
-      <div th:id="${gradientId}" hx-swap-oob="outerHTML" aria-hidden="true"
-           th:class="${'pointer-events-none absolute inset-0 bg-gradient-to-r ' + gradientClasses + ' animate-[gradient-in_700ms_ease-out]'}"></div>
+      <span th:id="${goodId}" hx-swap-oob="outerHTML" class="badge badge-sm badge-success"
+            th:title="|Good similarity: ${goodScore}|" th:text="${goodScore}">0</span>
+      <span th:id="${badId}" hx-swap-oob="outerHTML" class="badge badge-sm badge-error"
+            th:title="|Bad similarity: ${badScore}|" th:text="${badScore}">0</span>
+      <div th:id="${gradientId}" hx-swap-oob="outerHTML" aria-hidden="true"></div>
     </th:block>
   </template>
-
-  <!-- Keep the newest message visible when auto-scrolling is enabled. -->
-  <script>
-    const messages = document.getElementById("messages");
-    const autoScrollToggle = document.getElementById("auto-scroll-toggle");
-    const autoScrollKey = "live-chat:auto-scroll";
-
-    if (messages && autoScrollToggle) {
-      const savedAutoScroll = localStorage.getItem(autoScrollKey);
-      if (savedAutoScroll !== null) {
-        autoScrollToggle.checked = savedAutoScroll === "true";
-      }
-
-      autoScrollToggle.addEventListener("change", () => {
-        localStorage.setItem(autoScrollKey, String(autoScrollToggle.checked));
-        if (autoScrollToggle.checked) {
-          requestAnimationFrame(() => messages.scrollTop = messages.scrollHeight);
-        }
-      });
-
-      const scrollToLatest = () => {
-        if (autoScrollToggle.checked) {
-          requestAnimationFrame(() => messages.scrollTop = messages.scrollHeight);
-        }
-      };
-
-      new MutationObserver(scrollToLatest).observe(messages, {
-        childList: true,
-        subtree: true
-      });
-    }
-  </script>
 </body>
 
 </html>
