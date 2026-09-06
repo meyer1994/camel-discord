@@ -101,9 +101,13 @@
           <!-- live chart via SSE -->
           <div id="score-chart" class="w-36 h-12" hx-ext="hx-sse"
                th:attr="'hx-sse:connect' = @{/chart/stream}"
-               hx-swap="innerHTML">
+               hx-target="#chart-tbody"
+               hx-swap="beforeend">
             <table class="charts-css line hide-data">
-              <tbody><tr><td style="--start:0.5;--end:0.5;--color:var(--color-success)"><span class="tooltip">Good: 50</span><span class="data">50</span></td><td style="--start:0.5;--end:0.5;--color:var(--color-error)"><span class="tooltip">Bad: 50</span><span class="data">50</span></td></tr></tbody>
+              <tbody id="chart-tbody"
+                hx-on="htmx:afterSwap: var rows=this.querySelectorAll('tr'); while(rows.length > 6) { this.removeChild(rows[0]); }">
+                <tr><td style="--start:0.5;--end:0.5;--color:var(--color-success)"><span class="tooltip">Good: 50</span><span class="data">50</span></td><td style="--start:0.5;--end:0.5;--color:var(--color-error)"><span class="tooltip">Bad: 50</span><span class="data">50</span></td></tr>
+              </tbody>
             </table>
           </div>
         </div>
@@ -154,21 +158,19 @@
       </div>
     </div>
 
-    <!-- Chart fragment: full table with all segments -->
-    <table th:fragment="chart-fragment" class="charts-css line hide-data">
-      <tbody>
-        <tr th:each="row : ${chartRows}">
-          <td th:style="'--start:' + ${row.start_good} + ';--end:' + ${row.end_good_norm} + ';--color:var(--color-success)'">
-            <span class="tooltip" th:text="'Good: ' + ${#numbers.formatDecimal(row.end_good, 1, 0)}">Good: 50</span>
-            <span class="data" th:text="${#numbers.formatDecimal(row.end_good, 1, 0)}">50</span>
-          </td>
-          <td th:style="'--start:' + ${row.start_bad} + ';--end:' + ${row.end_bad_norm} + ';--color:var(--color-error)'">
-            <span class="tooltip" th:text="'Bad: ' + ${#numbers.formatDecimal(row.end_bad, 1, 0)}">Bad: 50</span>
-            <span class="data" th:text="${#numbers.formatDecimal(row.end_bad, 1, 0)}">50</span>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <!-- Chart fragment: just the rows, appended beforeend into the live tbody -->
+    <th:block th:fragment="chart-fragment">
+      <tr th:each="row : ${chartRows}">
+        <td th:style="'--start:' + ${row.start_good} + ';--end:' + ${row.end_good_norm} + ';--color:var(--color-success)'">
+          <span class="tooltip" th:text="'Good: ' + ${#numbers.formatDecimal(row.end_good, 1, 0)}">Good: 50</span>
+          <span class="data" th:text="${#numbers.formatDecimal(row.end_good, 1, 0)}">50</span>
+        </td>
+        <td th:style="'--start:' + ${row.start_bad} + ';--end:' + ${row.end_bad_norm} + ';--color:var(--color-error)'">
+          <span class="tooltip" th:text="'Bad: ' + ${#numbers.formatDecimal(row.end_bad, 1, 0)}">Bad: 50</span>
+          <span class="data" th:text="${#numbers.formatDecimal(row.end_bad, 1, 0)}">50</span>
+        </td>
+      </tr>
+    </th:block>
 
     <!-- OOB score update fragment -->
     <th:block th:fragment="chat-score-update(goodId, goodScore, badId, badScore)">
