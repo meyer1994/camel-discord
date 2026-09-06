@@ -36,21 +36,29 @@ public class Camel extends RouteBuilder {
         .log(LoggingLevel.DEBUG, "Received kick message: ${body}")
         .wireTap("seda:kick-chat-listener");
 
-    /**
-     * Generate embeddings for labeled example texts at boot.
-     */
+    /** Generate embeddings for labeled example texts at boot. */
     from("direct:example-embeddings")
         .log("Generating example embeddings")
-        .split().body().parallelProcessing()
-        .setHeader("text").simple("${body[text]}")
-        .setHeader("label").simple("${body[label]}")
-        .setBody().simple("${body[text]}")
+        .split()
+        .body()
+        .parallelProcessing()
+        .setHeader("text")
+        .simple("${body[text]}")
+        .setHeader("label")
+        .simple("${body[label]}")
+        .setBody()
+        .simple("${body[text]}")
         .to("openai:embeddings?embeddingModel=openai/text-embedding-3-small")
-        .filter().simple("${size()} > 0")
-        .setVariable("embedding").simple("${body.toString()}")
-        .setVariable("text").simple("${header.text}")
-        .setVariable("label").simple("${header.label}")
-        .to("""
+        .filter()
+        .simple("${size()} > 0")
+        .setVariable("embedding")
+        .simple("${body.toString()}")
+        .setVariable("text")
+        .simple("${header.text}")
+        .setVariable("label")
+        .simple("${header.label}")
+        .to(
+            """
             sql:
               INSERT INTO text_examples (text, embedding, label)
               VALUES (
@@ -61,17 +69,13 @@ public class Camel extends RouteBuilder {
             """)
         .log("Inserted example: ${variable.label} | ${variable.text}");
 
-    /**
-     * Listen for kick chat messages and insert them into the database.
-     */
+    /** Listen for kick chat messages and insert them into the database. */
     from("seda:kick-chat-listener?concurrentConsumers=1&size=10000")
         .bean(Kick.class, "publish")
         .wireTap("seda:kick-chat-insert")
         .log("Published kick message: ${headers['x-camel-kick-channel-name']} ${body.id}");
 
-    /**
-     * Listen for twitch chat messages and insert them into the database.
-     */
+    /** Listen for twitch chat messages and insert them into the database. */
     from("seda:twitch-chat-listener?concurrentConsumers=1&size=10000")
         .bean(Twitch.class, "publish")
         .wireTap("seda:twitch-chat-insert")
@@ -79,11 +83,12 @@ public class Camel extends RouteBuilder {
 
     /**
      * Insert twitch chat messages into the database.
-     * 
-     * Sends to the twitch-chat-embed seda queue.
+     *
+     * <p>Sends to the twitch-chat-embed seda queue.
      */
     from("seda:twitch-chat-insert?concurrentConsumers=32&size=10000")
-        .to("""
+        .to(
+            """
             sql:
               INSERT INTO twitch_event_chat (
                 message_id,
@@ -150,17 +155,19 @@ public class Camel extends RouteBuilder {
               )
               RETURNING *
             """)
-        .split().body()
+        .split()
+        .body()
         .wireTap("seda:twitch-chat-embed")
         .log("Inserted twitch message: ${body[channel_name]} ${body[message_id]}");
 
     /**
      * Insert kick chat messages into the database.
-     * 
-     * Sends to the kick-chat-embed seda queue.
+     *
+     * <p>Sends to the kick-chat-embed seda queue.
      */
     from("seda:kick-chat-insert?concurrentConsumers=32&size=10000")
-        .to("""
+        .to(
+            """
             sql:
               INSERT INTO kick_event_chat (
                 message_id,
@@ -185,74 +192,92 @@ public class Camel extends RouteBuilder {
               )
               RETURNING *
             """)
-        .split().body()
+        .split()
+        .body()
         .wireTap("seda:kick-chat-embed")
         .log("Inserted kick message: ${body[message_id]} ${body[channel_name]}");
 
     /**
      * Embed twitch chat messages and update the database.
-     * 
-     * Sends to the twitch-chat-score seda queue.
+     *
+     * <p>Sends to the twitch-chat-score seda queue.
      */
     from("seda:twitch-chat-embed?concurrentConsumers=64&size=10000")
-        .setVariable("id").simple("${body[id]}")
-        .setVariable("channel_name").simple("${body[channel_name]}")
-        .setVariable("message_id").simple("${body[message_id]}")
-        .setVariable("message").simple("${body[message]}")
-        .log("Getting embedding for twitch message: ${variable:message_id} ${variable:channel_name}")
+        .setVariable("id")
+        .simple("${body[id]}")
+        .setVariable("channel_name")
+        .simple("${body[channel_name]}")
+        .setVariable("message_id")
+        .simple("${body[message_id]}")
+        .setVariable("message")
+        .simple("${body[message]}")
+        .log(
+            "Getting embedding for twitch message: ${variable:message_id} ${variable:channel_name}")
         .to("openai:embeddings?embeddingModel=openai/text-embedding-3-small")
-        .filter().simple("${size()} > 0")
-        .setVariable("embedding").simple("${body.toString()}")
-        .to("sql:UPDATE twitch_event_chat SET message_embeddings = :#embedding::vector WHERE id = :#id")
+        .filter()
+        .simple("${size()} > 0")
+        .setVariable("embedding")
+        .simple("${body.toString()}")
+        .to(
+            "sql:UPDATE twitch_event_chat SET message_embeddings = :#embedding::vector WHERE id = :#id")
         .wireTap("seda:twitch-chat-score-publish")
         .log("Updated twitch message: ${variable:message_id} ${variable:channel_name}");
 
     /**
      * Embed kick chat messages and update the database.
-     * 
-     * Sends to the kick-chat-score seda queue.
+     *
+     * <p>Sends to the kick-chat-score seda queue.
      */
     from("seda:kick-chat-embed?concurrentConsumers=64&size=10000")
-        .setVariable("id").simple("${body[id]}")
-        .setVariable("channel_name").simple("${body[channel_name]}")
-        .setVariable("message_id").simple("${body[message_id]}")
-        .setVariable("message").simple("${body[message]}")
+        .setVariable("id")
+        .simple("${body[id]}")
+        .setVariable("channel_name")
+        .simple("${body[channel_name]}")
+        .setVariable("message_id")
+        .simple("${body[message_id]}")
+        .setVariable("message")
+        .simple("${body[message]}")
         .log("Getting embedding for kick message: ${variable:message_id} ${variable:channel_name}")
         .to("openai:embeddings?embeddingModel=openai/text-embedding-3-small")
-        .filter().simple("${size()} > 0")
-        .setVariable("embedding").simple("${body.toString()}")
-        .to("sql:UPDATE kick_event_chat SET message_embeddings = :#embedding::vector WHERE id = :#id")
+        .filter()
+        .simple("${size()} > 0")
+        .setVariable("embedding")
+        .simple("${body.toString()}")
+        .to(
+            "sql:UPDATE kick_event_chat SET message_embeddings = :#embedding::vector WHERE id = :#id")
         .wireTap("seda:kick-chat-score-publish")
         .log("Updated kick message: ${variable:message_id} ${variable:channel_name}");
 
     /**
      * Score twitch chat messages and update the database.
      *
-     * Variables message_id, channel_name, and embedding are already set upstream.
+     * <p>Variables message_id, channel_name, and embedding are already set upstream.
      */
     from("seda:twitch-chat-score-publish?concurrentConsumers=64&size=10000")
         .bean(Examples.class, "score")
-        .to("sql:UPDATE twitch_event_chat SET good_score = :#${variable.goodScore}, bad_score = :#${variable.badScore} WHERE id = :#${variable.id}")
+        .to(
+            "sql:UPDATE twitch_event_chat SET good_score = :#${variable.goodScore}, bad_score = :#${variable.badScore} WHERE id = :#${variable.id}")
         .bean(Twitch.class, "publishScore")
         .log("Scored twitch message: ${variable:message_id} ${variable:channel_name}");
 
     /**
      * Score kick chat messages and update the database.
      *
-     * Variables message_id, channel_name, and embedding are already set upstream.
+     * <p>Variables message_id, channel_name, and embedding are already set upstream.
      */
     from("seda:kick-chat-score-publish?concurrentConsumers=64&size=10000")
         .bean(Examples.class, "score")
-        .to("sql:UPDATE kick_event_chat SET good_score = :#${variable.goodScore}, bad_score = :#${variable.badScore} WHERE id = :#${variable.id}")
+        .to(
+            "sql:UPDATE kick_event_chat SET good_score = :#${variable.goodScore}, bad_score = :#${variable.badScore} WHERE id = :#${variable.id}")
         .bean(Kick.class, "publishScore")
         .log("Scored kick message: ${variable:message_id} ${variable:channel_name}");
 
-    /**
-     * Delete twitch chat messages from the database.
-     */
+    /** Delete twitch chat messages from the database. */
     from(String.format("timer:twitch-chat-delete?period=%d", Math.max(0, twitchDeletePeriod)))
-        .setVariable("maxMessages").constant(Math.max(0, this.twitchMaxMessages))
-        .to("""
+        .setVariable("maxMessages")
+        .constant(Math.max(0, this.twitchMaxMessages))
+        .to(
+            """
             sql:
               DELETE FROM twitch_event_chat
               WHERE id IN (
@@ -265,12 +290,12 @@ public class Camel extends RouteBuilder {
         .log("Twitch retention plan: ${body}")
         .log("Deleted beyond the most recent ${variable.maxMessages} twitch messages");
 
-    /**
-     * Delete kick chat messages from the database.
-     */
+    /** Delete kick chat messages from the database. */
     from(String.format("timer:kick-chat-delete?period=%d", Math.max(0, kickDeletePeriod)))
-        .setVariable("maxMessages").constant(Math.max(0, this.kickMaxMessages))
-        .to("""
+        .setVariable("maxMessages")
+        .constant(Math.max(0, this.kickMaxMessages))
+        .to(
+            """
             sql:
               DELETE FROM kick_event_chat
               WHERE id IN (
@@ -286,13 +311,14 @@ public class Camel extends RouteBuilder {
     /**
      * Query 10-second windowed score segments for the last minute.
      *
-     * Each returned row is one line segment: start = previous bucket's avg,
-     * end = current bucket's avg.  The first bucket is omitted because it
-     * has no predecessor to connect from.
+     * <p>Each returned row is one line segment: start = previous bucket's avg, end = current
+     * bucket's avg. The first bucket is omitted because it has no predecessor to connect from.
      */
     from("direct:score-chart")
-        .to("""
-            sql:WITH buckets AS (
+        .to(
+            """
+            sql:
+            WITH buckets AS (
               SELECT
                 to_timestamp(floor(extract(epoch from created_at) / 10) * 10) AS bucket,
                 good_score,
@@ -335,9 +361,7 @@ public class Camel extends RouteBuilder {
             """)
         .log("Score chart data: ${body}");
 
-    /**
-     * Render and broadcast the score chart every second.
-     */
+    /** Render and broadcast the score chart every second. */
     from("timer:chart?period=1000")
         .to("direct:score-chart")
         .bean(Chart.class, "publish")
