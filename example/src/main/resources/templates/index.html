@@ -54,6 +54,7 @@
     integrity="sha384-BvJpBiO8Kh31EqtJe5DRIeWrHWnCGkwytKs9NKFi86Hhw96dEqdEMzZDeK9iEGTc"
     crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/htmx.org@4.0.0/dist/ext/hx-sse.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/charts.css@1.1.0/dist/charts.min.css" />
 </head>
 
 <body class="bg-base-100 flex flex-col">
@@ -95,6 +96,27 @@
           <div>
             <div class="text-xs text-base-content/50 uppercase tracking-wider">Realtime</div>
             <h1 class="text-lg font-bold">LIVE_MESSAGES</h1>
+          </div>
+          <div class="w-48 h-16">
+            <table class="charts-css line show-heading show-labels show-primary-axis --heading-size: 2 --labels-size: 1" style="height: 100%;">
+              <thead><tr><th scope="col">Score</th></tr></thead>
+              <tbody>
+                <tr style="--color: var(--color-success);">
+                  <td style="--start: 0.2; --size: 0.6;"><span class="data">60</span></td>
+                  <td style="--start: 0.6; --size: 0.5;"><span class="data">50</span></td>
+                  <td style="--start: 0.5; --size: 0.7;"><span class="data">70</span></td>
+                  <td style="--start: 0.7; --size: 0.4;"><span class="data">40</span></td>
+                  <td style="--start: 0.4; --size: 0.8;"><span class="data">80</span></td>
+                </tr>
+                <tr style="--color: var(--color-error);">
+                  <td style="--start: 0.8; --size: 0.4;"><span class="data">40</span></td>
+                  <td style="--start: 0.4; --size: 0.5;"><span class="data">50</span></td>
+                  <td style="--start: 0.5; --size: 0.3;"><span class="data">30</span></td>
+                  <td style="--start: 0.3; --size: 0.6;"><span class="data">60</span></td>
+                  <td style="--start: 0.6; --size: 0.2;"><span class="data">20</span></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
