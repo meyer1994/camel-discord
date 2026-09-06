@@ -57,7 +57,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/charts.css/dist/charts.min.css">
 </head>
 
-<body class="bg-base-100 flex flex-col gap-2">
+<body class="bg-base-100 flex flex-col gap-2 h-dvh overflow-hidden">
   <!-- navbar -->
   <div class="navbar bg-base-200 shadow flex justify-between">
     <!-- left: logo -->
@@ -71,9 +71,9 @@
   </div>
 
   <!-- main -->
-  <main class="flex flex-col items-center w-full">
+  <main class="flex-1 min-h-0 w-full flex flex-col items-center">
     <!-- Landing state -->
-    <section th:if="${!feed}" class="card bg-base-200 shadow">
+    <section th:if="${!feed}" class="card bg-base-200 shadow my-auto">
       <div class="card-body items-center text-center">
         <h1 class="card-title text-2xl">Choose a channel</h1>
         <p class="text-base-content/70">Select a configured channel to start the live chat feed.</p>
@@ -89,8 +89,8 @@
     </section>
 
     <!-- Feed state -->
-    <section th:if="${feed}" class="card bg-base-200 shadow w-full lg:w-156">
-      <div class="card-body flex flex-col gap-6">
+    <section th:if="${feed}" class="card bg-base-200 shadow w-full lg:w-156 flex flex-col flex-1 min-h-0">
+      <div class="card-body flex flex-col gap-6 flex-1 min-h-0">
         <!-- header -->
         <div class="flex items-center justify-between gap-4">
           <div>
@@ -99,24 +99,22 @@
           </div>
 
           <!-- live chart via SSE -->
-          <div id="score-chart" class="w-36 h-12" hx-ext="hx-sse"
-               th:attr="'hx-sse:connect' = @{/chart/stream}"
-               hx-target="#chart-tbody"
-               hx-swap="beforeend">
+          <div id="score-chart" class="w-36 h-12" hx-ext="hx-sse" th:attr="'hx-sse:connect' = @{/chart/stream}"
+            hx-target="#chart" hx-swap="beforeend">
             <table class="charts-css line hide-data">
-              <tbody id="chart-tbody"
-                hx-on="htmx:afterSwap: var rows=this.querySelectorAll('tr'); while(rows.length > 6) { this.removeChild(rows[0]); }">
-                <tr><td style="--start:0.5;--end:0.5;--color:var(--color-success)"><span class="tooltip">Good: 50</span><span class="data">50</span></td><td style="--start:0.5;--end:0.5;--color:var(--color-error)"><span class="tooltip">Bad: 50</span><span class="data">50</span></td></tr>
+              <tbody id="chart" hx-on="every 0.5s -> {
+                while (this.children.length > 100) this.firstElementChild.remove();
+              }">
               </tbody>
             </table>
           </div>
         </div>
 
         <!-- messages -->
-        <div class="overflow-y-auto max-h-[80vh]">
-          <div id="messages" hx-ext="hx-sse" th:attr="'hx-sse:connect' = @{/c/{channel}/events(channel=${channel})}"
-            hx-swap="beforeend scroll:bottom" class="flex flex-col gap-4">
-          </div>
+        <div id="messages" hx-ext="hx-sse" th:attr="'hx-sse:connect' = @{/c/{channel}/events(channel=${channel})}"
+          hx-swap="beforeend scroll:bottom" class="flex flex-col gap-4 flex-1 overflow-y-auto [scrollbar-gutter:stable] overscroll-contain" hx-on="every 0.5s -> {
+              while (this.children.length > 100) this.firstElementChild.remove();
+            }">
         </div>
       </div>
     </section>
@@ -154,20 +152,23 @@
       <!-- body: username then message -->
       <div class="w-full flex flex-col gap-1">
         <span class="font-semibold text-sm" th:text="|@${username}|"></span>
-        <p class="text-sm" th:text="${message}">Message</p>
+        <p class="text-sm break-words" th:text="${message}">Message</p>
       </div>
     </div>
 
     <!-- Chart fragment: just the rows, appended beforeend into the live tbody -->
     <th:block th:fragment="chart-fragment">
-      <tr th:each="row : ${chartRows}">
-        <td th:style="'--start:' + ${row.start_good} + ';--end:' + ${row.end_good_norm} + ';--color:var(--color-success)'">
-          <span class="tooltip" th:text="'Good: ' + ${#numbers.formatDecimal(row.end_good, 1, 0)}">Good: 50</span>
-          <span class="data" th:text="${#numbers.formatDecimal(row.end_good, 1, 0)}">50</span>
+      <tr>
+        <td
+          th:style="'--start:' + ${good.start / 100} + ';--end:' + ${good.end / 100} + ';--color:var(--color-success)'">
+          <span class="data" th:text="${good.end}">50</span>
         </td>
-        <td th:style="'--start:' + ${row.start_bad} + ';--end:' + ${row.end_bad_norm} + ';--color:var(--color-error)'">
-          <span class="tooltip" th:text="'Bad: ' + ${#numbers.formatDecimal(row.end_bad, 1, 0)}">Bad: 50</span>
-          <span class="data" th:text="${#numbers.formatDecimal(row.end_bad, 1, 0)}">50</span>
+        <td th:style="'--start:' + ${bad.start / 100} + ';--end:' + ${bad.end / 100} + ';--color:var(--color-error)'">
+          <span class="data" th:text="${bad.end}">50</span>
+          <div class="tooltip">
+            <p th:text="'Good: ' + ${#numbers.formatDecimal(good.end, 2, 2)}">Good: 50</p>
+            <p th:text="'Bad: ' + ${#numbers.formatDecimal(bad.end, 2, 2)}">Bad: 50</p>
+          </div>
         </td>
       </tr>
     </th:block>

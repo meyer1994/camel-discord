@@ -8,6 +8,7 @@ import org.apache.camel.ProducerTemplate;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -21,6 +22,7 @@ public class Examples {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    @Async
     @EventListener(ApplicationReadyEvent.class)
     public void createExampleEmbeddings() {
         jdbcTemplate.update("DELETE FROM text_examples");
@@ -281,7 +283,11 @@ public class Examples {
                 Map.of("text", "virtue signaling hard", "label", "bad"),
 
                 // BAD — trolling & bait (15)
-                Map.of("text", "did you know you can double your fps by deleting system32", "label", "bad"),
+                Map.of(
+                        "text",
+                        "did you know you can double your fps by deleting system32",
+                        "label",
+                        "bad"),
                 Map.of("text", "source trust me bro", "label", "bad"),
                 Map.of("text", "not reading that essay", "label", "bad"),
                 Map.of("text", "counter ratio plus you're wrong", "label", "bad"),
@@ -295,15 +301,15 @@ public class Examples {
                 Map.of("text", "who hurt you", "label", "bad"),
                 Map.of("text", "touch grass", "label", "bad"),
                 Map.of("text", "skill issue plus ratio plus you're maidenless", "label", "bad"),
-                Map.of("text", "based on what", "label", "bad")
-        );
+                Map.of("text", "based on what", "label", "bad"));
 
         producerTemplate.asyncSendBody("direct:example-embeddings", examples);
     }
 
     /**
-     * Queries the 20 nearest labeled examples and returns a weighted good score
-     * in the range [0.0, 100.0]. Returns 50.0 when no examples exist.
+     * Queries the 20 nearest labeled examples and returns a weighted good score in
+     * the range [0.0,
+     * 100.0]. Returns 50.0 when no examples exist.
      *
      * @param embedding comma-separated vector string, e.g. "[0.012, -0.034, ...]"
      */
@@ -330,8 +336,10 @@ public class Examples {
 
     /**
      * Camel-friendly overload. Reads {@code variable.embedding}, computes the
-     * score, and writes {@code variable.goodScore}, {@code variable.badScore},
-     * and {@code variable.score} (all 0-100) back into the exchange.
+     * score, and writes
+     * {@code variable.goodScore}, {@code variable.badScore}, and
+     * {@code variable.score} (all 0-100)
+     * back into the exchange.
      */
     public void score(Exchange exchange) {
         String embedding = exchange.getVariable("embedding", String.class);
