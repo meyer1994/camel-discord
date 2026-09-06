@@ -2,15 +2,11 @@ package io.meyer1994.example;
 
 import java.time.Duration;
 import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.camel.CamelContext;
-import org.apache.camel.ProducerTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,12 +22,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriUtils;
-import org.thymeleaf.TemplateEngine;
-import org.thymeleaf.context.Context;
 
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 @Controller
 public class Routes {
@@ -45,10 +37,7 @@ public class Routes {
     private CamelContext camelContext;
 
     @Autowired
-    private ProducerTemplate producerTemplate;
-
-    @Autowired
-    private TemplateEngine templateEngine;
+    private Chart chart;
 
     @Value("${app.twitch.channels}")
     private Set<String> channels = Collections.emptySet();
@@ -116,33 +105,9 @@ public class Routes {
     @ResponseBody
     @GetMapping(path = "/chart/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> chartData() {
-        return Flux.defer(() -> {
-            Set<Object> emitted = ConcurrentHashMap.newKeySet();
-            return withHeartbeat(
-                Flux.interval(Duration.ofSeconds(1))
-                    .flatMap(tick -> Mono.fromCallable(() -> {
-                        @SuppressWarnings("unchecked")
-                        List<Map<String, Object>> segments = producerTemplate.requestBody("direct:score-chart", null,
-                                List.class);
-                        StringBuilder html = new StringBuilder();
-                        for (Map<String, Object> seg : segments) {
-                            Object bucket = seg.get("end_bucket");
-                            if (emitted.add(bucket)) {
-                                Context ctx = new Context(Locale.ROOT);
-                                ctx.setVariable("startGood", ((Number) seg.get("start_good")).doubleValue());
-                                ctx.setVariable("endGood", ((Number) seg.get("end_good_norm")).doubleValue());
-                                ctx.setVariable("startBad", ((Number) seg.get("start_bad")).doubleValue());
-                                ctx.setVariable("endBad", ((Number) seg.get("end_bad_norm")).doubleValue());
-                                ctx.setVariable("goodLabel", ((Number) seg.get("end_good")).intValue());
-                                ctx.setVariable("badLabel", ((Number) seg.get("end_bad")).intValue());
-                                html.append(templateEngine.process("index", Set.of("chart-row"), ctx).strip());
-                            }
-                        }
-                        return html.length() > 0 ? html.toString() : null;
-                    }).subscribeOn(Schedulers.boundedElastic()))
-                    .filter(Objects::nonNull)
-                    .map(html -> ServerSentEvent.<String>builder(html).build()));
-        });
+        return withHeartbeat(
+            chart.stream()
+                .map(html -> ServerSentEvent.<String>builder(html).build()));
     }
 
     private static Flux<ServerSentEvent<String>> withHeartbeat(

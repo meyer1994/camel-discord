@@ -335,5 +335,13 @@ public class Camel extends RouteBuilder {
             ORDER BY bucket
             """)
         .log("Score chart data: ${body}");
+
+    /**
+     * Render and broadcast the score chart every second.
+     */
+    from("timer:chart?period=1000")
+        .to("direct:score-chart")
+        .bean(Chart.class, "publish")
+        .log("Chart broadcasted");
   }
 }
