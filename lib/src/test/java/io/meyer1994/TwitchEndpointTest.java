@@ -11,33 +11,33 @@ import org.junit.jupiter.api.Test;
 
 class TwitchEndpointTest extends CamelTestSupport {
 
-    @Test
-    void normalizesChannelLoginFromUri() {
-        TwitchEndpoint endpoint = context.getEndpoint("twitch:TwItCh", TwitchEndpoint.class);
+  @Test
+  void normalizesChannelLoginFromUri() {
+    TwitchEndpoint endpoint = context.getEndpoint("twitch:TwItCh", TwitchEndpoint.class);
 
-        assertEquals("twitch", endpoint.getChannel());
-    }
+    assertEquals("twitch", endpoint.getChannel());
+  }
 
-    @Test
-    void rejectsMissingChannelLogin() {
-        assertThrows(ResolveEndpointFailedException.class, () -> context.getEndpoint("twitch:"));
-    }
+  @Test
+  void rejectsMissingChannelLogin() {
+    assertThrows(ResolveEndpointFailedException.class, () -> context.getEndpoint("twitch:"));
+  }
 
-    @Test
-    void rejectsProducerCreation() {
-        TwitchEndpoint endpoint = context.getEndpoint("twitch:twitch?event=CHAT", TwitchEndpoint.class);
+  @Test
+  void rejectsProducerCreation() {
+    TwitchEndpoint endpoint = context.getEndpoint("twitch:twitch?event=CHAT", TwitchEndpoint.class);
 
-        assertThrows(UnsupportedOperationException.class, endpoint::createProducer);
-    }
+    assertThrows(UnsupportedOperationException.class, endpoint::createProducer);
+  }
 
-    @Test
-    void autowiresChatClientFromCamelRegistry() {
-        TestTwitchChat chat = new TestTwitchChat();
-        ITwitchClient client = chat.asClient();
-        context.getRegistry().bind("twitchClient", client);
+  @Test
+  void autowiresChatClientFromCamelRegistry() {
+    TestTwitchChat chat = new TestTwitchChat();
+    ITwitchClient client = chat.asClient();
+    context.getRegistry().bind("twitchClient", client);
 
-        TwitchEndpoint endpoint = context.getEndpoint("twitch:twitch?event=CHAT", TwitchEndpoint.class);
+    TwitchEndpoint endpoint = context.getEndpoint("twitch:twitch?event=CHAT", TwitchEndpoint.class);
 
-        assertSame(client, endpoint.getClient());
-    }
+    assertSame(client, endpoint.getClient());
+  }
 }
