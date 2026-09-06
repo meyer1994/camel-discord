@@ -56,11 +56,11 @@ public class Twitch {
 
         String html = render("chat-message", variables);
 
-        ServerSentEvent.Builder<String> builder = ServerSentEvent.builder(html);
-        builder.event("chat");
-        builder.id("twitch:" + event.getMessageEvent().getMessageId().orElse("-1"));
+        ServerSentEvent<String> sse = ServerSentEvent.<String>builder(html)
+                .id("twitch:" + event.getMessageEvent().getMessageId().orElse("-1"))
+                .build();
 
-        topics.publish(channel, builder.build());
+        topics.publish(channel, sse);
     }
 
     public void publishScore(Exchange exchange) {
@@ -81,11 +81,10 @@ public class Twitch {
         variables.put("gradientClasses", scoredGradientClasses(good, bad));
 
         String html = render("chat-score-update", variables);
-        ServerSentEvent<String> event = ServerSentEvent.<String>builder(html)
-                .event("chat")
+        ServerSentEvent<String> sse = ServerSentEvent.<String>builder(html)
                 .id("twitch-score:" + messageId)
                 .build();
-        topics.publish(channel, event);
+        topics.publish(channel, sse);
     }
 
     private String render(String fragment, Map<String, Object> variables) {

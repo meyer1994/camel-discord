@@ -1,42 +1,86 @@
 <!doctype html>
-<html lang="en" data-theme="dark" xmlns:th="http://www.thymeleaf.org">
+<html lang="en" data-theme="livechat" xmlns:th="http://www.thymeleaf.org">
 
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title th:text="${feed} ? |LIVE_CHAT // ${channel}| : 'LIVE_CHAT'">LIVE_CHAT</title>
   <meta name="description"
-        th:content="${feed} ? |Live chat feed for ${channel}.| : 'Live chat streams for Twitch and Kick channels.'">
+    th:content="${feed} ? |Live chat feed for ${channel}.| : 'Live chat streams for Twitch and Kick channels.'">
 
   <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css">
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-  <script src="https://unpkg.com/htmx.org@2.0.7"></script>
-  <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
+  <style>
+    [data-theme="livechat"] {
+      color-scheme: dark;
+
+      --color-base-100: oklch(15% 0 0);
+      --color-base-200: oklch(20% 0 0);
+      --color-base-300: oklch(25% 0 0);
+      --color-base-content: oklch(90% 0 0);
+
+      --color-primary: oklch(60% 0.2 300);
+      --color-primary-content: oklch(95% 0 0);
+      --color-secondary: oklch(65% 0.2 150);
+      --color-secondary-content: oklch(10% 0 0);
+      --color-accent: oklch(70% 0.2 250);
+      --color-accent-content: oklch(10% 0 0);
+
+      --color-neutral: oklch(40% 0 0);
+      --color-neutral-content: oklch(90% 0 0);
+
+      --color-info: oklch(65% 0.15 250);
+      --color-info-content: oklch(10% 0 0);
+      --color-success: oklch(60% 0.2 145);
+      --color-success-content: oklch(95% 0 0);
+      --color-warning: oklch(70% 0.15 80);
+      --color-warning-content: oklch(10% 0 0);
+      --color-error: oklch(55% 0.2 25);
+      --color-error-content: oklch(95% 0 0);
+
+      --radius-selector: 0.25rem;
+      --radius-field: 0.5rem;
+      --radius-box: 0.5rem;
+
+      --size-selector: 0.25rem;
+      --size-field: 0.25rem;
+
+      --border: 1px;
+      --depth: 0;
+      --noise: 0;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@4.0.0"
+    integrity="sha384-BvJpBiO8Kh31EqtJe5DRIeWrHWnCGkwytKs9NKFi86Hhw96dEqdEMzZDeK9iEGTc"
+    crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@4.0.0/dist/ext/hx-sse.js"></script>
 </head>
 
-<body class="bg-base-100 min-h-screen">
-  <div class="navbar bg-base-200 shadow-sm px-4">
-    <div class="flex-1">
-      <a class="btn btn-ghost text-xl font-bold" href="/">LIVE_CHAT</a>
-    </div>
-    <div th:if="${feed}" class="flex items-center gap-3">
+<body class="bg-base-100 flex flex-col">
+  <!-- navbar -->
+  <div class="navbar bg-base-200 shadow flex justify-between">
+    <!-- left: logo -->
+    <a class="btn btn-ghost text-xl font-bold" href="/">LIVE_CHAT</a>
+
+    <!-- right: channel info -->
+    <div th:if="${feed}" class="flex items-center gap-4">
       <span class="badge badge-success">ONLINE</span>
       <span class="badge badge-outline" th:text="|CH: ${channel}|">CH: channel</span>
     </div>
   </div>
 
-  <main class="p-4 max-w-3xl mx-auto">
+  <!-- main -->
+  <main class="flex flex-col items-center w-full">
     <!-- Landing state -->
-    <section th:if="${!feed}" class="card bg-base-200 shadow-xl mt-8">
+    <section th:if="${!feed}" class="card bg-base-200 shadow">
       <div class="card-body items-center text-center">
         <h1 class="card-title text-2xl">Choose a channel</h1>
         <p class="text-base-content/70">Select a configured channel to start the live chat feed.</p>
-        <form class="flex flex-col sm:flex-row gap-2 w-full max-w-md mt-4" method="get" th:action="@{/c}">
+        <form class="flex flex-col w-full" method="get" th:action="@{/c}">
           <select class="select select-bordered flex-1" name="channel" required>
             <option value="" disabled selected>Select a channel</option>
-            <option th:each="channelOption : ${channels}"
-                    th:value="${channelOption}"
-                    th:text="${channelOption}">channel</option>
+            <option th:each="channelOption : ${channels}" th:value="${channelOption}" th:text="${channelOption}">channel
+            </option>
           </select>
           <button class="btn btn-primary" type="submit">START_FEED</button>
         </form>
@@ -44,20 +88,22 @@
     </section>
 
     <!-- Feed state -->
-    <section th:if="${feed}" class="mt-4">
-      <div class="flex items-center justify-between mb-4">
-        <div>
-          <div class="text-xs text-base-content/50 uppercase tracking-wider">Realtime</div>
-          <h1 class="text-lg font-bold">LIVE_MESSAGES</h1>
+    <section th:if="${feed}" class="card bg-base-200 shadow w-156">
+      <div class="card-body flex flex-col gap-6">
+        <!-- header -->
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-xs text-base-content/50 uppercase tracking-wider">Realtime</div>
+            <h1 class="text-lg font-bold">LIVE_MESSAGES</h1>
+          </div>
+          <a class="btn btn-sm btn-ghost" th:href="@{/}">Change channel</a>
         </div>
-        <a class="btn btn-sm btn-ghost" th:href="@{/}">Change channel</a>
-      </div>
-      <div class="card bg-base-200 shadow">
-        <div class="card-body p-0">
-          <div class="h-[60vh] overflow-y-auto p-4 space-y-2"
-               hx-ext="sse"
-               th:attr="sse-connect=@{/c/{channel}/events(channel=${channel})}">
-            <div id="messages" sse-swap="chat" hx-swap="beforeend scroll:bottom"></div>
+
+        <!-- messages -->
+        <div class="overflow-y-auto max-h-[80vh]">
+          <div id="messages" hx-ext="hx-sse" th:attr="'hx-sse:connect' = @{/c/{channel}/events(channel=${channel})}"
+            hx-swap="beforeend scroll:bottom"
+            class="flex flex-col gap-4">
           </div>
         </div>
       </div>
@@ -67,32 +113,44 @@
   <!-- Fragments are stripped during the initial page render. -->
   <div th:remove="all">
     <!-- Complete message fragment -->
-    <div th:fragment="chat-message(messageId, gradientId, source, username, title, goodId, badId, goodScore, badScore, timeTitle, timeText, message, gradientClasses)"
-         th:id="${messageId}" th:title="${title}"
-         class="chat chat-start">
-      <div class="chat-header flex items-center gap-1 justify-center">
-        <span class="badge badge-sm"
-              th:classappend="${source == 'Twitch'} ? 'badge-primary' : 'badge-secondary'"
-              th:title="|Source: ${source}|" th:text="${source}">source</span>
-        <span class="font-semibold" th:title="|User: @${username}|" th:text="|@${username}|">@username</span>
-        <span th:id="${goodId}" aria-live="polite" class="badge badge-sm badge-success"
-              th:title="${goodScore == null ? 'Good similarity unavailable' : 'Good similarity: ' + goodScore}"
-              th:text="${goodScore == null ? '' : goodScore}">-</span>
-        <span th:id="${badId}" aria-live="polite" class="badge badge-sm badge-error"
-              th:title="${badScore == null ? 'Bad similarity unavailable' : 'Bad similarity: ' + badScore}"
-              th:text="${badScore == null ? '' : badScore}">-</span>
-        <time class="text-xs text-base-content/50" th:title="${timeTitle}" th:text="${timeText}">00:00:00</time>
+    <div
+      th:fragment="chat-message(messageId, gradientId, source, username, title, goodId, badId, goodScore, badScore, timeTitle, timeText, message, gradientClasses)"
+      th:id="${messageId}" th:title="${title}" class="flex flex-col gap-1 w-full">
+      <!-- header: source left, timestamp right -->
+      <div class="flex justify-between items-center text-xs w-full">
+        <!-- left: source and time -->
+        <div class="flex items-center gap-2">
+          <!-- source -->
+          <span class="badge badge-xs" th:classappend="${source == 'Twitch'} ? 'badge-primary' : 'badge-secondary'"
+            th:title="|Source: ${source}|" th:text="${source}">source</span>
+          <!-- time -->
+          <time class="text-base-content/50" th:title="${timeTitle}" th:text="${timeText}">00:00:00</time>
+        </div>
+
+        <!-- right: scores -->
+        <div class="flex items-center gap-2">
+          <span th:id="${goodId}" aria-live="polite" class="badge badge-sm badge-success"
+            th:title="${goodScore == null ? 'Good similarity unavailable' : 'Good similarity: ' + goodScore}"
+            th:text="${goodScore == null ? '' : goodScore}">-</span>
+          <span th:id="${badId}" aria-live="polite" class="badge badge-sm badge-error"
+            th:title="${badScore == null ? 'Bad similarity unavailable' : 'Bad similarity: ' + badScore}"
+            th:text="${badScore == null ? '' : badScore}">-</span>
+        </div>
       </div>
 
-      <div class="chat-bubble" th:title="${message}" th:text="${message}">Message</div>
+      <!-- body: username then message -->
+      <div class="w-full flex flex-col gap-1">
+        <span class="font-semibold text-sm" th:text="|@${username}|"></span>
+        <p class="text-sm" th:text="${message}">Message</p>
+      </div>
     </div>
 
     <!-- OOB score update fragment -->
     <th:block th:fragment="chat-score-update(goodId, goodScore, badId, badScore, gradientId, gradientClasses)">
       <span th:id="${goodId}" hx-swap-oob="outerHTML" aria-live="polite" class="badge badge-sm badge-success"
-            th:title="|Good similarity: ${goodScore}|" th:text="${goodScore}">0</span>
+        th:title="|Good similarity: ${goodScore}|" th:text="${goodScore}">0</span>
       <span th:id="${badId}" hx-swap-oob="outerHTML" aria-live="polite" class="badge badge-sm badge-error"
-            th:title="|Bad similarity: ${badScore}|" th:text="${badScore}">0</span>
+        th:title="|Bad similarity: ${badScore}|" th:text="${badScore}">0</span>
     </th:block>
   </div>
 </body>

@@ -61,11 +61,10 @@ public class Kick {
 
         String html = render("chat-message", variables);
 
-        ServerSentEvent<String> event = ServerSentEvent.<String>builder(html)
-                .event("chat")
+        ServerSentEvent<String> sse = ServerSentEvent.<String>builder(html)
                 .id("kick:" + message.id())
                 .build();
-        topics.publish(channel, event);
+        topics.publish(channel, sse);
     }
 
     public void publishScore(Exchange exchange) {
@@ -86,11 +85,10 @@ public class Kick {
         variables.put("gradientClasses", scoredGradientClasses(good, bad));
 
         String html = render("chat-score-update", variables);
-        ServerSentEvent<String> event = ServerSentEvent.<String>builder(html)
-                .event("chat")
+        ServerSentEvent<String> sse = ServerSentEvent.<String>builder(html)
                 .id("kick-score:" + messageId)
                 .build();
-        topics.publish(channel, event);
+        topics.publish(channel, sse);
     }
 
     private String render(String fragment, Map<String, Object> variables) {
