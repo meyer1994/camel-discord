@@ -292,8 +292,7 @@ public class Camel extends RouteBuilder {
      */
     from("direct:score-chart")
         .to("""
-            sql:
-            WITH buckets AS (
+            sql:WITH buckets AS (
               SELECT
                 to_timestamp(floor(extract(epoch from created_at) / 10) * 10) AS bucket,
                 good_score,
