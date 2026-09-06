@@ -83,8 +83,7 @@ public class Camel extends RouteBuilder {
     /**
      * Insert twitch chat messages into the database.
      *
-     * <p>
-     * Sends to the twitch-chat-embed seda queue.
+     * <p>Sends to the twitch-chat-embed seda queue.
      */
     from("seda:twitch-chat-insert?concurrentConsumers=32&size=10000")
         .to(
@@ -162,8 +161,7 @@ public class Camel extends RouteBuilder {
     /**
      * Insert kick chat messages into the database.
      *
-     * <p>
-     * Sends to the kick-chat-embed seda queue.
+     * <p>Sends to the kick-chat-embed seda queue.
      */
     from("seda:kick-chat-insert?concurrentConsumers=32&size=10000")
         .to(
@@ -199,8 +197,7 @@ public class Camel extends RouteBuilder {
     /**
      * Embed twitch chat messages and update the database.
      *
-     * <p>
-     * Sends to the twitch-chat-score seda queue.
+     * <p>Sends to the twitch-chat-score seda queue.
      */
     from("seda:twitch-chat-embed?concurrentConsumers=64&size=10000")
         .setVariable("id")
@@ -226,8 +223,7 @@ public class Camel extends RouteBuilder {
     /**
      * Embed kick chat messages and update the database.
      *
-     * <p>
-     * Sends to the kick-chat-score seda queue.
+     * <p>Sends to the kick-chat-score seda queue.
      */
     from("seda:kick-chat-embed?concurrentConsumers=64&size=10000")
         .setVariable("id")
@@ -252,8 +248,7 @@ public class Camel extends RouteBuilder {
     /**
      * Score twitch chat messages and update the database.
      *
-     * <p>
-     * Variables message_id, channel_name, and embedding are already set upstream.
+     * <p>Variables message_id, channel_name, and embedding are already set upstream.
      */
     from("seda:twitch-chat-score-publish?concurrentConsumers=64&size=10000")
         .bean(Examples.class, "score")
@@ -265,8 +260,7 @@ public class Camel extends RouteBuilder {
     /**
      * Score kick chat messages and update the database.
      *
-     * <p>
-     * Variables message_id, channel_name, and embedding are already set upstream.
+     * <p>Variables message_id, channel_name, and embedding are already set upstream.
      */
     from("seda:kick-chat-score-publish?concurrentConsumers=64&size=10000")
         .bean(Examples.class, "score")
@@ -309,9 +303,7 @@ public class Camel extends RouteBuilder {
         .log("Kick retention plan: ${body}")
         .log("Deleted beyond the most recent ${variable.maxMessages} kick messages");
 
-    /**
-     * Query the average good/bad scores of the last 10 seconds, every second.
-     */
+    /** Query the average good/bad scores of the last 10 seconds, every second. */
     from("timer:score-chart?period=1000")
         .to(
             """
