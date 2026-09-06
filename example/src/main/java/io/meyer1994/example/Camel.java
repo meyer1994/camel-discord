@@ -284,42 +284,68 @@ public class Camel extends RouteBuilder {
         .log("Deleted beyond the most recent ${variable.maxMessages} kick messages");
 
     /**
-     * Snapshot 10-second window score averages every 10 seconds.
+     * Query 10-second windowed score averages for the last minute.
+     *
+     * Returns up to 6 rows (one per 10s bucket) with good/bad averages
+     * scaled 0-1 for Chart.css, plus LAG-derived --start values.
      */
-    from("timer:score-window?period=10000")
+    from("direct:score-chart")
         .to("""
             sql:
-            INSERT INTO score_windows (good_avg, bad_avg, message_count)
-            SELECT
-                COALESCE(AVG(good_score), 50.0),
-                COALESCE(AVG(bad_score), 50.0),
-                COUNT(*)
-            FROM (
-                SELECT good_score, bad_score FROM twitch_event_chat
-                WHERE created_at > NOW() - INTERVAL '10 seconds'
-                  AND good_score IS NOT NULL
-                UNION ALL
-                SELECT good_score, bad_score FROM kick_event_chat
-                WHERE created_at > NOW() - INTERVAL '10 seconds'
-                  AND good_score IS NOT NULL
-            ) recent
-            """)
-        .log("Window snapshot: ${body}");
-
-    /**
-     * Keep only the last 6 score windows (1 minute of history).
-     */
-    from("timer:score-window-cleanup?period=60000")
-        .to("""
-            sql:
-            WITH keep AS (
-                SELECT id FROM score_windows
-                ORDER BY window_time DESC
-                LIMIT 6
+            WITH buckets AS (
+              SELECT
+                to_timestamp(floor(extract(epoch from created_at) / 10) * 10) AS bucket,
+                good_score,
+                bad_score
+              FROM twitch_event_chat
+              WHERE created_at > NOW() - INTERVAL '70 seconds'
+                AND good_score IS NOT NULL
+              UNION ALL
+              SELECT
+                to_timestamp(floor(extract(epoch from created_at) / 10) * 10),
+                good_score,
+                bad_score
+              FROM kick_event_chat
+              WHERE created_at > NOW() - INTERVAL '70 seconds'
+                AND good_score IS NOT NULL
+            ),
+            windowed AS (
+              SELECT
+                bucket,
+                COALESCE(AVG(good_score), 50.0) AS good_avg,
+                COALESCE(AVG(bad_score), 50.0) AS bad_avg,
+                COUNT(*) AS msg_count
+              FROM buckets
+              GROUP BY bucket
+              ORDER BY bucket
+              LIMIT 6
             )
-            DELETE FROM score_windows
-            WHERE id NOT IN (SELECT id FROM keep)
+            SELECT
+              bucket,
+              good_avg,
+              bad_avg,
+              msg_count,
+              ROUND((good_avg / 100.0)::numeric, 2) AS good_start,
+              ROUND(
+                (
+                  COALESCE(
+                    LEAD(good_avg) OVER (ORDER BY bucket),
+                    good_avg
+                  ) / 100.0
+                )::numeric, 2
+              ) AS good_end,
+              ROUND((bad_avg / 100.0)::numeric, 2) AS bad_start,
+              ROUND(
+                (
+                  COALESCE(
+                    LEAD(bad_avg) OVER (ORDER BY bucket),
+                    bad_avg
+                  ) / 100.0
+                )::numeric, 2
+              ) AS bad_end
+            FROM windowed
+            ORDER BY bucket
             """)
-        .log("Score window cleanup: ${body}");
+        .log("Score chart data: ${body}");
   }
 }
