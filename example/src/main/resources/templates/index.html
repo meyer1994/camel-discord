@@ -64,14 +64,12 @@
     </section>
   </main>
 
-  <!-- Template fragments for SSE payloads -->
-  <template>
+  <!-- Fragments are stripped during the initial page render. -->
+  <div th:remove="all">
     <!-- Complete message fragment -->
     <div th:fragment="chat-message(messageId, gradientId, source, username, title, goodId, badId, goodScore, badScore, timeTitle, timeText, message, gradientClasses)"
          th:id="${messageId}" th:title="${title}"
          class="chat chat-start">
-      <div th:id="${gradientId}" aria-hidden="true"></div>
-
       <div class="chat-header flex items-center gap-1 justify-center">
         <span class="badge badge-sm"
               th:classappend="${source == 'Twitch'} ? 'badge-primary' : 'badge-secondary'"
@@ -91,13 +89,12 @@
 
     <!-- OOB score update fragment -->
     <th:block th:fragment="chat-score-update(goodId, goodScore, badId, badScore, gradientId, gradientClasses)">
-      <span th:id="${goodId}" hx-swap-oob="outerHTML" class="badge badge-sm badge-success"
+      <span th:id="${goodId}" hx-swap-oob="outerHTML" aria-live="polite" class="badge badge-sm badge-success"
             th:title="|Good similarity: ${goodScore}|" th:text="${goodScore}">0</span>
-      <span th:id="${badId}" hx-swap-oob="outerHTML" class="badge badge-sm badge-error"
+      <span th:id="${badId}" hx-swap-oob="outerHTML" aria-live="polite" class="badge badge-sm badge-error"
             th:title="|Bad similarity: ${badScore}|" th:text="${badScore}">0</span>
-      <div th:id="${gradientId}" hx-swap-oob="outerHTML" aria-hidden="true"></div>
     </th:block>
-  </template>
+  </div>
 </body>
 
 </html>

@@ -71,8 +71,8 @@ public class Kick {
     public void publishScore(Exchange exchange) {
         String channel = exchange.getVariable("channel_name", String.class);
         String messageId = exchange.getVariable("message_id", String.class);
-        Integer good = exchange.getVariable("goodScore", Integer.class);
-        Integer bad = exchange.getVariable("badScore", Integer.class);
+        Double good = exchange.getVariable("goodScore", Double.class);
+        Double bad = exchange.getVariable("badScore", Double.class);
         if (channel == null || messageId == null || good == null || bad == null) {
             return;
         }
@@ -119,8 +119,8 @@ public class Kick {
         return "from-red-500/10 via-transparent via-50% to-green-500/10";
     }
 
-    private static String scoredGradientClasses(int good, int bad) {
-        int total = Math.max(1, good + bad);
+    private static String scoredGradientClasses(double good, double bad) {
+        double total = Math.max(0.001, good + bad);
         int badShare = (int) Math.round(bad * 100.0 / total / 10.0) * 10;
         int position = Math.max(0, Math.min(100, badShare));
         return "from-red-500/25 via-transparent via-" + position + "% to-green-500/25";

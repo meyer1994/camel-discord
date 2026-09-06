@@ -179,6 +179,7 @@ public class Camel extends RouteBuilder {
         .filter().simple("${size()} > 0")
         .setVariable("embedding").simple("${body.toString()}")
         .to("sql:UPDATE twitch_event_chat SET message_embeddings = :#embedding::vector WHERE id = :#id")
+        .wireTap("seda:twitch-chat-score-publish")
         .log("Updated twitch message: ${variable:message_id} ${variable:channel_name}");
 
     /**
@@ -196,7 +197,32 @@ public class Camel extends RouteBuilder {
         .filter().simple("${size()} > 0")
         .setVariable("embedding").simple("${body.toString()}")
         .to("sql:UPDATE kick_event_chat SET message_embeddings = :#embedding::vector WHERE id = :#id")
+        .wireTap("seda:kick-chat-score-publish")
         .log("Updated kick message: ${variable:message_id} ${variable:channel_name}");
+
+    /**
+     * Score twitch chat messages and update the database.
+     *
+     * Variables message_id and channel_name are already set upstream.
+     */
+    from("seda:twitch-chat-score-publish?concurrentConsumers=64&size=10000")
+        .setVariable("goodScore").simple("${random(0, 100)}")
+        .setVariable("badScore").simple("${random(0, 100)}")
+        .setVariable("score").simple("${random(0, 100)}")
+        .bean(Twitch.class, "publishScore")
+        .log("Scored twitch message: ${variable:message_id} ${variable:channel_name}");
+
+    /**
+     * Score kick chat messages and update the database.
+     *
+     * Variables message_id and channel_name are already set upstream.
+     */
+    from("seda:kick-chat-score-publish?concurrentConsumers=64&size=10000")
+        .setVariable("goodScore").simple("${random(0, 100)}")
+        .setVariable("badScore").simple("${random(0, 100)}")
+        .setVariable("score").simple("${random(0, 100)}")
+        .bean(Kick.class, "publishScore")
+        .log("Scored kick message: ${variable:message_id} ${variable:channel_name}");
 
     /**
      * Delete twitch chat messages from the database.
