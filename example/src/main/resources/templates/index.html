@@ -17,26 +17,26 @@
       --color-base-100: oklch(15% 0 0);
       --color-base-200: oklch(20% 0 0);
       --color-base-300: oklch(25% 0 0);
-      --color-base-content: oklch(90% 0 0);
+      --color-base-content: oklch(92% 0 0);
 
-      --color-primary: oklch(60% 0.2 300);
-      --color-primary-content: oklch(95% 0 0);
-      --color-secondary: oklch(65% 0.2 150);
-      --color-secondary-content: oklch(10% 0 0);
-      --color-accent: oklch(70% 0.2 250);
-      --color-accent-content: oklch(10% 0 0);
+      --color-primary: oklch(75% 0.09 300);
+      --color-primary-content: oklch(20% 0 0);
+      --color-secondary: oklch(78% 0.09 150);
+      --color-secondary-content: oklch(15% 0 0);
+      --color-accent: oklch(80% 0.09 250);
+      --color-accent-content: oklch(15% 0 0);
 
       --color-neutral: oklch(40% 0 0);
-      --color-neutral-content: oklch(90% 0 0);
+      --color-neutral-content: oklch(92% 0 0);
 
-      --color-info: oklch(65% 0.15 250);
-      --color-info-content: oklch(10% 0 0);
-      --color-success: oklch(60% 0.2 145);
-      --color-success-content: oklch(95% 0 0);
-      --color-warning: oklch(70% 0.15 80);
-      --color-warning-content: oklch(10% 0 0);
-      --color-error: oklch(55% 0.2 25);
-      --color-error-content: oklch(95% 0 0);
+      --color-info: oklch(80% 0.07 250);
+      --color-info-content: oklch(15% 0 0);
+      --color-success: oklch(80% 0.08 145);
+      --color-success-content: oklch(20% 0 0);
+      --color-warning: oklch(82% 0.07 80);
+      --color-warning-content: oklch(15% 0 0);
+      --color-error: oklch(72% 0.09 25);
+      --color-error-content: oklch(20% 0 0);
 
       --radius-selector: 0.25rem;
       --radius-field: 0.5rem;
@@ -121,7 +121,7 @@
         <!-- left: source and time -->
         <div class="flex items-center gap-2">
           <!-- source -->
-          <span class="badge badge-xs" th:classappend="${source == 'Twitch'} ? 'badge-primary' : 'badge-secondary'"
+          <span class="badge badge-xs font-bold" th:classappend="${source == 'Twitch'} ? 'badge-primary' : 'badge-secondary'"
             th:title="|Source: ${source}|" th:text="${source}">source</span>
           <!-- time -->
           <time class="text-base-content/50" th:title="${timeTitle}" th:text="${timeText}">00:00:00</time>
@@ -129,12 +129,12 @@
 
         <!-- right: scores -->
         <div class="flex items-center gap-2">
-          <span th:id="${goodId}" aria-live="polite" class="badge badge-sm badge-success"
-            th:title="${goodScore == null ? 'Good similarity unavailable' : 'Good similarity: ' + goodScore}"
-            th:text="${goodScore == null ? '' : goodScore}">-</span>
-          <span th:id="${badId}" aria-live="polite" class="badge badge-sm badge-error"
-            th:title="${badScore == null ? 'Bad similarity unavailable' : 'Bad similarity: ' + badScore}"
-            th:text="${badScore == null ? '' : badScore}">-</span>
+          <span th:id="${goodId}" aria-live="polite" class="badge badge-sm badge-success font-bold"
+            th:title="${goodScore == null ? 'Good similarity unavailable' : 'Good similarity: ' + #numbers.formatDecimal(goodScore, 0, 1)}"
+            th:text="${goodScore == null ? '' : #numbers.formatDecimal(goodScore, 0, 1)}">-</span>
+          <span th:id="${badId}" aria-live="polite" class="badge badge-sm badge-error font-bold"
+            th:title="${badScore == null ? 'Bad similarity unavailable' : 'Bad similarity: ' + #numbers.formatDecimal(badScore, 0, 1)}"
+            th:text="${badScore == null ? '' : #numbers.formatDecimal(badScore, 0, 1)}">-</span>
         </div>
       </div>
 
@@ -147,10 +147,10 @@
 
     <!-- OOB score update fragment -->
     <th:block th:fragment="chat-score-update(goodId, goodScore, badId, badScore, gradientId, gradientClasses)">
-      <span th:id="${goodId}" hx-swap-oob="outerHTML" aria-live="polite" class="badge badge-sm badge-success"
-        th:title="|Good similarity: ${goodScore}|" th:text="${goodScore}">0</span>
-      <span th:id="${badId}" hx-swap-oob="outerHTML" aria-live="polite" class="badge badge-sm badge-error"
-        th:title="|Bad similarity: ${badScore}|" th:text="${badScore}">0</span>
+      <span th:id="${goodId}" hx-swap-oob="outerHTML" aria-live="polite" class="badge badge-sm badge-success font-bold"
+        th:title="|Good similarity: ${#numbers.formatDecimal(goodScore, 0, 1)}|" th:text="${#numbers.formatDecimal(goodScore, 0, 1)}">0</span>
+      <span th:id="${badId}" hx-swap-oob="outerHTML" aria-live="polite" class="badge badge-sm badge-error font-bold"
+        th:title="|Bad similarity: ${#numbers.formatDecimal(badScore, 0, 1)}|" th:text="${#numbers.formatDecimal(badScore, 0, 1)}">0</span>
     </th:block>
   </div>
 </body>

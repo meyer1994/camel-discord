@@ -37,6 +37,31 @@ public class Camel extends RouteBuilder {
         .wireTap("seda:kick-chat-listener");
 
     /**
+     * Generate embeddings for labeled example texts at boot.
+     */
+    from("direct:example-embeddings")
+        .log("Generating example embeddings")
+        .split().body().parallelProcessing()
+        .setHeader("text").simple("${body[text]}")
+        .setHeader("label").simple("${body[label]}")
+        .setBody().simple("${body[text]}")
+        .to("openai:embeddings?embeddingModel=openai/text-embedding-3-small")
+        .filter().simple("${size()} > 0")
+        .setVariable("embedding").simple("${body.toString()}")
+        .setVariable("text").simple("${header.text}")
+        .setVariable("label").simple("${header.label}")
+        .to("""
+            sql:
+              INSERT INTO text_examples (text, embedding, label)
+              VALUES (
+                :#${variable.text},
+                :#${variable.embedding}::vector,
+                :#${variable.label}
+              )
+            """)
+        .log("Inserted example: ${variable.label} | ${variable.text}");
+
+    /**
      * Listen for kick chat messages and insert them into the database.
      */
     from("seda:kick-chat-listener?concurrentConsumers=1&size=10000")
@@ -203,24 +228,20 @@ public class Camel extends RouteBuilder {
     /**
      * Score twitch chat messages and update the database.
      *
-     * Variables message_id and channel_name are already set upstream.
+     * Variables message_id, channel_name, and embedding are already set upstream.
      */
     from("seda:twitch-chat-score-publish?concurrentConsumers=64&size=10000")
-        .setVariable("goodScore").simple("${random(0, 100)}")
-        .setVariable("badScore").simple("${random(0, 100)}")
-        .setVariable("score").simple("${random(0, 100)}")
+        .bean(Examples.class, "score")
         .bean(Twitch.class, "publishScore")
         .log("Scored twitch message: ${variable:message_id} ${variable:channel_name}");
 
     /**
      * Score kick chat messages and update the database.
      *
-     * Variables message_id and channel_name are already set upstream.
+     * Variables message_id, channel_name, and embedding are already set upstream.
      */
     from("seda:kick-chat-score-publish?concurrentConsumers=64&size=10000")
-        .setVariable("goodScore").simple("${random(0, 100)}")
-        .setVariable("badScore").simple("${random(0, 100)}")
-        .setVariable("score").simple("${random(0, 100)}")
+        .bean(Examples.class, "score")
         .bean(Kick.class, "publishScore")
         .log("Scored kick message: ${variable:message_id} ${variable:channel_name}");
 
