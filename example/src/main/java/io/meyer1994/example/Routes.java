@@ -2,11 +2,14 @@ package io.meyer1994.example;
 
 import java.time.Duration;
 import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.camel.CamelContext;
+import org.apache.camel.ProducerTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +25,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriUtils;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
 import reactor.core.publisher.Flux;
 
@@ -35,6 +40,12 @@ public class Routes {
 
     @Autowired
     private CamelContext camelContext;
+
+    @Autowired
+    private ProducerTemplate producerTemplate;
+
+    @Autowired
+    private TemplateEngine templateEngine;
 
     @Value("${app.twitch.channels}")
     private Set<String> channels = Collections.emptySet();
@@ -97,6 +108,17 @@ public class Routes {
         return withHeartbeat(Flux.merge(
                 kick.stream(channel),
                 twitch.stream(channel)));
+    }
+
+    @ResponseBody
+    @GetMapping(path = "/chart", produces = MediaType.TEXT_HTML_VALUE)
+    public String chart() {
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> rows = producerTemplate.requestBody("direct:score-chart", null, List.class);
+
+        Context context = new Context(Locale.ROOT);
+        context.setVariable("chartRows", rows);
+        return templateEngine.process("index", Set.of("chart-fragment"), context).strip();
     }
 
     private static Flux<ServerSentEvent<String>> withHeartbeat(
