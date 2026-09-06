@@ -98,21 +98,24 @@
             <h1 class="text-lg font-bold">LIVE_MESSAGES</h1>
           </div>
 
-          <!-- live chart polls every 10s -->
-          <div id="score-chart" class="w-36 h-12"
-               hx-get="/chart"
-               hx-trigger="every 10s"
-               hx-swap="innerHTML"
-               hx-indicator=".htmx-indicator">
-            <table class="charts-css line hide-data"><tbody><tr><td style="--start:0.5;--end:0.5;--color:var(--color-success)"><span class="tooltip">Good: 50</span><span class="data">50</span></td></tr></tbody></table>
+          <!-- live chart via SSE -->
+          <div id="score-chart" class="w-36 h-12" hx-ext="hx-sse" th:attr="'hx-sse:connect' = @{/chart/stream}"
+            hx-swap="innerHTML">
+            <table class="charts-css line hide-data">
+              <tbody>
+                <tr>
+                  <td style="--start:0.5;--end:0.5;--color:var(--color-success)"><span class="tooltip">Good:
+                      50</span><span class="data">50</span></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
         <!-- messages -->
         <div class="overflow-y-auto max-h-[80vh]">
           <div id="messages" hx-ext="hx-sse" th:attr="'hx-sse:connect' = @{/c/{channel}/events(channel=${channel})}"
-            hx-swap="beforeend scroll:bottom"
-            class="flex flex-col gap-4">
+            hx-swap="beforeend scroll:bottom" class="flex flex-col gap-4">
           </div>
         </div>
       </div>
@@ -130,8 +133,9 @@
         <!-- left: source and time -->
         <div class="flex items-center gap-2">
           <!-- source -->
-          <span class="badge badge-xs font-bold" th:classappend="${source == 'Twitch'} ? 'badge-primary' : 'badge-secondary'"
-            th:title="|Source: ${source}|" th:text="${source}">source</span>
+          <span class="badge badge-xs font-bold"
+            th:classappend="${source == 'Twitch'} ? 'badge-primary' : 'badge-secondary'" th:title="|Source: ${source}|"
+            th:text="${source}">source</span>
           <!-- time -->
           <time class="text-base-content/50" th:title="${timeTitle}" th:text="${timeText}">00:00:00</time>
         </div>
@@ -173,9 +177,11 @@
     <!-- OOB score update fragment -->
     <th:block th:fragment="chat-score-update(goodId, goodScore, badId, badScore)">
       <span th:id="${goodId}" hx-swap-oob="outerHTML" aria-live="polite" class="badge badge-sm badge-success font-bold"
-        th:title="|Good similarity: ${#numbers.formatDecimal(goodScore, 0, 1)}|" th:text="${#numbers.formatDecimal(goodScore, 0, 1)}">0</span>
+        th:title="|Good similarity: ${#numbers.formatDecimal(goodScore, 0, 1)}|"
+        th:text="${#numbers.formatDecimal(goodScore, 0, 1)}">0</span>
       <span th:id="${badId}" hx-swap-oob="outerHTML" aria-live="polite" class="badge badge-sm badge-error font-bold"
-        th:title="|Bad similarity: ${#numbers.formatDecimal(badScore, 0, 1)}|" th:text="${#numbers.formatDecimal(badScore, 0, 1)}">0</span>
+        th:title="|Bad similarity: ${#numbers.formatDecimal(badScore, 0, 1)}|"
+        th:text="${#numbers.formatDecimal(badScore, 0, 1)}">0</span>
     </th:block>
   </div>
 </body>

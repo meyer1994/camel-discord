@@ -29,6 +29,8 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 @Controller
 public class Routes {
@@ -111,14 +113,18 @@ public class Routes {
     }
 
     @ResponseBody
-    @GetMapping(path = "/chart", produces = MediaType.TEXT_HTML_VALUE)
-    public String chart() {
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> rows = producerTemplate.requestBody("direct:score-chart", null, List.class);
-
-        Context context = new Context(Locale.ROOT);
-        context.setVariable("chartRows", rows);
-        return templateEngine.process("index", Set.of("chart-fragment"), context).strip();
+    @GetMapping(path = "/chart/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> chartData() {
+        return withHeartbeat(
+            Flux.interval(Duration.ofSeconds(1))
+                .flatMap(tick -> Mono.fromCallable(() -> {
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> rows = producerTemplate.requestBody("direct:score-chart", null, List.class);
+                    Context context = new Context(Locale.ROOT);
+                    context.setVariable("chartRows", rows);
+                    return templateEngine.process("index", Set.of("chart-fragment"), context).strip();
+                }).subscribeOn(Schedulers.boundedElastic()))
+                .map(html -> ServerSentEvent.<String>builder(html).build()));
     }
 
     private static Flux<ServerSentEvent<String>> withHeartbeat(
