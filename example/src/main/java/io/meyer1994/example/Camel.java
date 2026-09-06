@@ -284,10 +284,11 @@ public class Camel extends RouteBuilder {
         .log("Deleted beyond the most recent ${variable.maxMessages} kick messages");
 
     /**
-     * Query 10-second windowed score averages for the last minute.
+     * Query 10-second windowed score segments for the last minute.
      *
-     * Returns up to 6 rows (one per 10s bucket) with good/bad averages
-     * scaled 0-1 for Chart.css, plus LAG-derived --start values.
+     * Each returned row is one line segment: start = previous bucket's avg,
+     * end = current bucket's avg.  The first bucket is omitted because it
+     * has no predecessor to connect from.
      */
     from("direct:score-chart")
         .to("""
@@ -318,32 +319,19 @@ public class Camel extends RouteBuilder {
               FROM buckets
               GROUP BY bucket
               ORDER BY bucket
-              LIMIT 6
+              LIMIT 7
             )
             SELECT
-              bucket,
-              good_avg,
-              bad_avg,
+              bucket AS end_bucket,
+              good_avg AS end_good,
+              bad_avg AS end_bad,
               msg_count,
-              ROUND((good_avg / 100.0)::numeric, 2) AS good_start,
-              ROUND(
-                (
-                  COALESCE(
-                    LEAD(good_avg) OVER (ORDER BY bucket),
-                    good_avg
-                  ) / 100.0
-                )::numeric, 2
-              ) AS good_end,
-              ROUND((bad_avg / 100.0)::numeric, 2) AS bad_start,
-              ROUND(
-                (
-                  COALESCE(
-                    LEAD(bad_avg) OVER (ORDER BY bucket),
-                    bad_avg
-                  ) / 100.0
-                )::numeric, 2
-              ) AS bad_end
+              ROUND((LAG(good_avg) OVER (ORDER BY bucket) / 100.0)::numeric, 2) AS start_good,
+              ROUND((good_avg / 100.0)::numeric, 2) AS end_good_norm,
+              ROUND((LAG(bad_avg) OVER (ORDER BY bucket) / 100.0)::numeric, 2) AS start_bad,
+              ROUND((bad_avg / 100.0)::numeric, 2) AS end_bad_norm
             FROM windowed
+            WHERE LAG(good_avg) OVER (ORDER BY bucket) IS NOT NULL
             ORDER BY bucket
             """)
         .log("Score chart data: ${body}");

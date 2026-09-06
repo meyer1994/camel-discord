@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -114,17 +115,34 @@ public class Routes {
 
     @ResponseBody
     @GetMapping(path = "/chart/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> chartData() {
-        return withHeartbeat(
-            Flux.interval(Duration.ofSeconds(1))
-                .flatMap(tick -> Mono.fromCallable(() -> {
-                    @SuppressWarnings("unchecked")
-                    List<Map<String, Object>> rows = producerTemplate.requestBody("direct:score-chart", null, List.class);
-                    Context context = new Context(Locale.ROOT);
-                    context.setVariable("chartRows", rows);
-                    return templateEngine.process("index", Set.of("chart-fragment"), context).strip();
-                }).subscribeOn(Schedulers.boundedElastic()))
-                .map(html -> ServerSentEvent.<String>builder(html).build()));
+    public Flux<ServerSentEvent<String>> chartData() {
+        return Flux.defer(() -> {
+            Set<Object> emitted = ConcurrentHashMap.newKeySet();
+            return withHeartbeat(
+                Flux.interval(Duration.ofSeconds(1))
+                    .flatMap(tick -> Mono.fromCallable(() -> {
+                        @SuppressWarnings("unchecked")
+                        List<Map<String, Object>> segments = producerTemplate.requestBody("direct:score-chart", null,
+                                List.class);
+                        StringBuilder html = new StringBuilder();
+                        for (Map<String, Object> seg : segments) {
+                            Object bucket = seg.get("end_bucket");
+                            if (emitted.add(bucket)) {
+                                Context ctx = new Context(Locale.ROOT);
+                                ctx.setVariable("startGood", ((Number) seg.get("start_good")).doubleValue());
+                                ctx.setVariable("endGood", ((Number) seg.get("end_good_norm")).doubleValue());
+                                ctx.setVariable("startBad", ((Number) seg.get("start_bad")).doubleValue());
+                                ctx.setVariable("endBad", ((Number) seg.get("end_bad_norm")).doubleValue());
+                                ctx.setVariable("goodLabel", ((Number) seg.get("end_good")).intValue());
+                                ctx.setVariable("badLabel", ((Number) seg.get("end_bad")).intValue());
+                                html.append(templateEngine.process("index", Set.of("chart-row"), ctx).strip());
+                            }
+                        }
+                        return html.length() > 0 ? html.toString() : null;
+                    }).subscribeOn(Schedulers.boundedElastic()))
+                    .filter(Objects::nonNull)
+                    .map(html -> ServerSentEvent.<String>builder(html).build()));
+        });
     }
 
     private static Flux<ServerSentEvent<String>> withHeartbeat(
