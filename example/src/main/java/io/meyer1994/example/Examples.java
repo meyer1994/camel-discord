@@ -315,21 +315,21 @@ public class Examples {
   public Double getScore(String embedding) {
     String sql =
         """
-                SELECT
-                    COALESCE(
-                        SUM(similarity * CASE WHEN label = 'good' THEN 1.0 ELSE 0.0 END)
-                        / NULLIF(SUM(similarity), 0),
-                        0.5
-                    ) * 100.0 AS good_score
-                FROM (
-                    SELECT
-                        label,
-                        GREATEST(0, 1 - (embedding <=> ?::vector)) AS similarity
-                    FROM text_examples
-                    ORDER BY embedding <=> ?::vector
-                    LIMIT 20
-                ) neighbors
-                """;
+        SELECT
+            COALESCE(
+                SUM(similarity * CASE WHEN label = 'good' THEN 1.0 ELSE 0.0 END)
+                / NULLIF(SUM(similarity), 0),
+                0.5
+            ) * 100.0 AS good_score
+        FROM (
+            SELECT
+                label,
+                GREATEST(0, 1 - (embedding <=> ?::vector)) AS similarity
+            FROM text_examples
+            ORDER BY embedding <=> ?::vector
+            LIMIT 20
+        ) neighbors
+        """;
 
     return jdbcTemplate.queryForObject(sql, Double.class, embedding, embedding);
   }
