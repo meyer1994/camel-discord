@@ -114,7 +114,7 @@
   <div th:remove="all">
     <!-- Complete message fragment -->
     <div
-      th:fragment="chat-message(messageId, gradientId, source, username, title, goodId, badId, goodScore, badScore, timeTitle, timeText, message, gradientClasses)"
+      th:fragment="chat-message(messageId, source, username, title, goodId, badId, goodScore, badScore, timeTitle, timeText, message)"
       th:id="${messageId}" th:title="${title}" class="flex flex-col gap-1 w-full">
       <!-- header: source left, timestamp right -->
       <div class="flex justify-between items-center text-xs w-full">
@@ -146,7 +146,7 @@
     </div>
 
     <!-- OOB score update fragment -->
-    <th:block th:fragment="chat-score-update(goodId, goodScore, badId, badScore, gradientId, gradientClasses)">
+    <th:block th:fragment="chat-score-update(goodId, goodScore, badId, badScore)">
       <span th:id="${goodId}" hx-swap-oob="outerHTML" aria-live="polite" class="badge badge-sm badge-success font-bold"
         th:title="|Good similarity: ${#numbers.formatDecimal(goodScore, 0, 1)}|" th:text="${#numbers.formatDecimal(goodScore, 0, 1)}">0</span>
       <span th:id="${badId}" hx-swap-oob="outerHTML" aria-live="polite" class="badge badge-sm badge-error font-bold"

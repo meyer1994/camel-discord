@@ -41,7 +41,6 @@ public class Twitch {
 
         Map<String, Object> variables = new HashMap<>();
         variables.put("messageId", messageElementId(messageId));
-        variables.put("gradientId", gradientElementId(messageId));
         variables.put("source", "Twitch");
         variables.put("username", chatter);
         variables.put("title", firedAt);
@@ -52,7 +51,6 @@ public class Twitch {
         variables.put("timeTitle", firedAt);
         variables.put("timeText", CHAT_TIME_FORMAT.format(event.getFiredAtInstant()));
         variables.put("message", event.getMessage());
-        variables.put("gradientClasses", initialGradientClasses());
 
         String html = render("chat-message", variables);
 
@@ -77,8 +75,6 @@ public class Twitch {
         variables.put("goodScore", good);
         variables.put("badId", badScoreElementId(messageId));
         variables.put("badScore", bad);
-        variables.put("gradientId", gradientElementId(messageId));
-        variables.put("gradientClasses", scoredGradientClasses(good, bad));
 
         String html = render("chat-score-update", variables);
         ServerSentEvent<String> sse = ServerSentEvent.<String>builder(html)
@@ -105,19 +101,6 @@ public class Twitch {
         return "bad-score-twitch-" + messageId;
     }
 
-    private static String gradientElementId(String messageId) {
-        return "gradient-twitch-" + messageId;
-    }
 
-    private static String initialGradientClasses() {
-        return "from-red-500/10 via-transparent via-50% to-green-500/10";
-    }
-
-    private static String scoredGradientClasses(double good, double bad) {
-        double total = Math.max(0.001, good + bad);
-        int badShare = (int) Math.round(bad * 100.0 / total / 10.0) * 10;
-        int position = Math.max(0, Math.min(100, badShare));
-        return "from-red-500/25 via-transparent via-" + position + "% to-green-500/25";
-    }
 
 }

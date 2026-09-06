@@ -46,7 +46,6 @@ public class Kick {
 
         Map<String, Object> variables = new HashMap<>();
         variables.put("messageId", messageElementId(messageId));
-        variables.put("gradientId", gradientElementId(messageId));
         variables.put("source", "Kick");
         variables.put("username", username);
         variables.put("title", timestampTitle);
@@ -57,7 +56,6 @@ public class Kick {
         variables.put("timeTitle", timestampTitle);
         variables.put("timeText", timestampText);
         variables.put("message", message.content());
-        variables.put("gradientClasses", initialGradientClasses());
 
         String html = render("chat-message", variables);
 
@@ -81,8 +79,6 @@ public class Kick {
         variables.put("goodScore", good);
         variables.put("badId", badScoreElementId(messageId));
         variables.put("badScore", bad);
-        variables.put("gradientId", gradientElementId(messageId));
-        variables.put("gradientClasses", scoredGradientClasses(good, bad));
 
         String html = render("chat-score-update", variables);
         ServerSentEvent<String> sse = ServerSentEvent.<String>builder(html)
@@ -109,20 +105,7 @@ public class Kick {
         return "bad-score-kick-" + messageId;
     }
 
-    private static String gradientElementId(String messageId) {
-        return "gradient-kick-" + messageId;
-    }
 
-    private static String initialGradientClasses() {
-        return "from-red-500/10 via-transparent via-50% to-green-500/10";
-    }
-
-    private static String scoredGradientClasses(double good, double bad) {
-        double total = Math.max(0.001, good + bad);
-        int badShare = (int) Math.round(bad * 100.0 / total / 10.0) * 10;
-        int position = Math.max(0, Math.min(100, badShare));
-        return "from-red-500/25 via-transparent via-" + position + "% to-green-500/25";
-    }
 
     private static Instant timestamp(String createdAt) {
         if (createdAt != null && !createdAt.isBlank()) {
