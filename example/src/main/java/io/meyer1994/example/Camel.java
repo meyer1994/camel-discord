@@ -232,6 +232,7 @@ public class Camel extends RouteBuilder {
      */
     from("seda:twitch-chat-score-publish?concurrentConsumers=64&size=10000")
         .bean(Examples.class, "score")
+        .to("sql:UPDATE twitch_event_chat SET good_score = :#${variable.goodScore}, bad_score = :#${variable.badScore} WHERE id = :#${variable.id}")
         .bean(Twitch.class, "publishScore")
         .log("Scored twitch message: ${variable:message_id} ${variable:channel_name}");
 
@@ -242,6 +243,7 @@ public class Camel extends RouteBuilder {
      */
     from("seda:kick-chat-score-publish?concurrentConsumers=64&size=10000")
         .bean(Examples.class, "score")
+        .to("sql:UPDATE kick_event_chat SET good_score = :#${variable.goodScore}, bad_score = :#${variable.badScore} WHERE id = :#${variable.id}")
         .bean(Kick.class, "publishScore")
         .log("Scored kick message: ${variable:message_id} ${variable:channel_name}");
 
@@ -280,5 +282,44 @@ public class Camel extends RouteBuilder {
             """)
         .log("Kick retention plan: ${body}")
         .log("Deleted beyond the most recent ${variable.maxMessages} kick messages");
+
+    /**
+     * Snapshot 10-second window score averages every 10 seconds.
+     */
+    from("timer:score-window?period=10000")
+        .to("""
+            sql:
+            INSERT INTO score_windows (good_avg, bad_avg, message_count)
+            SELECT
+                COALESCE(AVG(good_score), 50.0),
+                COALESCE(AVG(bad_score), 50.0),
+                COUNT(*)
+            FROM (
+                SELECT good_score, bad_score FROM twitch_event_chat
+                WHERE created_at > NOW() - INTERVAL '10 seconds'
+                  AND good_score IS NOT NULL
+                UNION ALL
+                SELECT good_score, bad_score FROM kick_event_chat
+                WHERE created_at > NOW() - INTERVAL '10 seconds'
+                  AND good_score IS NOT NULL
+            ) recent
+            """)
+        .log("Window snapshot: ${body}");
+
+    /**
+     * Keep only the last 6 score windows (1 minute of history).
+     */
+    from("timer:score-window-cleanup?period=60000")
+        .to("""
+            sql:
+            WITH keep AS (
+                SELECT id FROM score_windows
+                ORDER BY window_time DESC
+                LIMIT 6
+            )
+            DELETE FROM score_windows
+            WHERE id NOT IN (SELECT id FROM keep)
+            """)
+        .log("Score window cleanup: ${body}");
   }
 }
