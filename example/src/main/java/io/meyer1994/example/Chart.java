@@ -5,6 +5,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import org.apache.camel.Exchange;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
@@ -14,13 +15,11 @@ import reactor.core.publisher.Sinks;
 
 @Service
 public class Chart {
+  @Autowired private TemplateEngine templateEngine;
 
-  private final TemplateEngine templateEngine;
-  private final Sinks.Many<Data> sink = Sinks.many().multicast().directBestEffort();
-
-  public Chart(TemplateEngine templateEngine) {
-    this.templateEngine = templateEngine;
-  }
+  // the replay and limit allows us to stream the last 100 points to new
+  // subscribers. so they will see a full chart on start
+  private final Sinks.Many<Data> sink = Sinks.many().replay().limit(100);
 
   public Flux<ServerSentEvent<String>> stream() {
     return sink.asFlux()
@@ -44,6 +43,7 @@ public class Chart {
   public void publish(Exchange exchange) {
     @SuppressWarnings("unchecked")
     List<Map<String, Object>> points = exchange.getMessage().getBody(List.class);
+
     if (points == null) {
       return;
     }
@@ -53,7 +53,7 @@ public class Chart {
       float bad = ((Number) entry.get("bad_avg")).floatValue();
       int msg_count = ((Number) entry.get("msg_count")).intValue();
       sink.tryEmitNext(new Data(good, bad, msg_count));
-      return;
+      return; // should only have one either way
     }
   }
 
