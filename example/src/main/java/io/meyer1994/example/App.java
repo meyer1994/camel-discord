@@ -1,5 +1,12 @@
 package io.meyer1994.example;
 
+import com.github.twitch4j.ITwitchClient;
+import com.github.twitch4j.TwitchClientBuilder;
+import com.pusher.client.Pusher;
+import com.pusher.client.PusherOptions;
+import com.pusher.client.connection.ConnectionEventListener;
+import com.pusher.client.connection.ConnectionState;
+import com.pusher.client.connection.ConnectionStateChange;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -9,14 +16,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.web.reactive.config.CorsRegistry;
 import org.springframework.web.reactive.config.WebFluxConfigurer;
-
-import com.github.twitch4j.ITwitchClient;
-import com.github.twitch4j.TwitchClientBuilder;
-import com.pusher.client.Pusher;
-import com.pusher.client.PusherOptions;
-import com.pusher.client.connection.ConnectionEventListener;
-import com.pusher.client.connection.ConnectionState;
-import com.pusher.client.connection.ConnectionStateChange;
 
 @EnableAsync
 @Configuration
@@ -30,13 +29,14 @@ public class App {
 
   @Bean(destroyMethod = "disconnect")
   Pusher pusher() {
-    Pusher pusher = new Pusher(
-        "32cbd69e4b950bf97679",
-        new PusherOptions()
-            .setHost("ws-us2.pusher.com")
-            .setUseTLS(true)
-            .setActivityTimeout(5_000)
-            .setPongTimeout(5_000));
+    Pusher pusher =
+        new Pusher(
+            "32cbd69e4b950bf97679",
+            new PusherOptions()
+                .setHost("ws-us2.pusher.com")
+                .setUseTLS(true)
+                .setActivityTimeout(5_000)
+                .setPongTimeout(5_000));
 
     LOG.info("Connecting to Kick WebSocket on ws-us2.pusher.com");
 
@@ -45,12 +45,9 @@ public class App {
           @Override
           public void onConnectionStateChange(ConnectionStateChange change) {
             ConnectionState state = change.getCurrentState();
-            if (state == ConnectionState.CONNECTED)
-              LOG.info("Kick WebSocket connected");
-            if (state == ConnectionState.RECONNECTING)
-              LOG.warn("Kick WebSocket reconnecting");
-            if (state == ConnectionState.DISCONNECTED)
-              LOG.warn("Kick WebSocket disconnected");
+            if (state == ConnectionState.CONNECTED) LOG.info("Kick WebSocket connected");
+            if (state == ConnectionState.RECONNECTING) LOG.warn("Kick WebSocket reconnecting");
+            if (state == ConnectionState.DISCONNECTED) LOG.warn("Kick WebSocket disconnected");
           }
 
           @Override
