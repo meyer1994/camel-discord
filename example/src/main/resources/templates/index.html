@@ -76,13 +76,19 @@
     <section th:if="${!feed}" class="card bg-base-200 shadow my-auto">
       <div class="card-body items-center text-center">
         <h1 class="card-title text-2xl">Choose a channel</h1>
-        <p class="text-base-content/70">Select a configured channel to start the live chat feed.</p>
-        <form class="flex flex-col w-full" method="get" th:action="@{/c}">
-          <select class="select select-bordered flex-1" name="channel" required>
-            <option value="" disabled selected>Select a channel</option>
-            <option th:each="channelOption : ${channels}" th:value="${channelOption}" th:text="${channelOption}">channel
-            </option>
-          </select>
+
+        <p class="text-base-content/70">Type a channel login. Suggestions are optional.</p>
+        <form class="flex flex-col gap-3 w-full" method="get" th:action="@{/c}">
+          <fieldset class="fieldset w-full text-left">
+            <legend class="fieldset-legend">Channel</legend>
+            <input class="input w-full" type="text" name="channel" list="channel-suggestions"
+              placeholder="e.g. xqc" required autocomplete="off" spellcheck="false">
+
+            <datalist id="channel-suggestions">
+              <option th:each="channelOption : ${channels}" th:value="${channelOption}"></option>
+            </datalist>
+          </fieldset>
+
           <button class="btn btn-primary" type="submit">START_FEED</button>
         </form>
       </div>

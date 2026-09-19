@@ -51,7 +51,10 @@ public class Routes {
 
   @GetMapping(path = "/c", produces = MediaType.TEXT_HTML_VALUE)
   public String selectChannel(@RequestParam("channel") String channel) {
-    return String.format("redirect:/c/%s", channel);
+    if (channel == null || channel.isBlank()) {
+      return "redirect:/";
+    }
+    return String.format("redirect:/c/%s", channel.trim().toLowerCase());
   }
 
   @GetMapping(path = "/c/{channel}", produces = MediaType.TEXT_HTML_VALUE)
