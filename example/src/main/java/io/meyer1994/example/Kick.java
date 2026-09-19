@@ -61,7 +61,7 @@ public class Kick {
     variables.put("timeText", timestampText);
     variables.put("message", message.content());
 
-    String id = String.format("kick:%d", message.id());
+    String id = String.format("kick:%s", messageId);
     String html = render("chat-message", variables);
 
     var sse = ServerSentEvent.<String>builder(html).id(id).build();
