@@ -54,6 +54,12 @@ public class KickConsumer extends DefaultConsumer {
             });
   }
 
+  @Override
+  protected void doStop() throws Exception {
+    endpoint.getPusher().unsubscribe("chatrooms." + chatroomId + ".v2");
+    super.doStop();
+  }
+
   private void subscribe(long id) {
     LOG.info("Resolved chatroom ID for channel {} to {}", endpoint.getChannel(), id);
     endpoint
