@@ -10,20 +10,20 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Sinks;
 
 @Service
 public class Chart {
 
   private final TemplateEngine templateEngine;
-  private final Topics<Data> topics = new Topics<>();
+  private final Sinks.Many<Data> sink = Sinks.many().multicast().directBestEffort();
 
   public Chart(TemplateEngine templateEngine) {
     this.templateEngine = templateEngine;
   }
 
   public Flux<ServerSentEvent<String>> stream() {
-    return topics
-        .subscribe("chart")
+    return sink.asFlux()
         .buffer(2, 1)
         .filter(points -> points.size() == 2)
         .map(
@@ -44,14 +44,15 @@ public class Chart {
   public void publish(Exchange exchange) {
     @SuppressWarnings("unchecked")
     List<Map<String, Object>> points = exchange.getMessage().getBody(List.class);
-    if (points == null) return;
+    if (points == null) {
+      return;
+    }
 
     for (var entry : points) {
       float good = ((Number) entry.get("good_avg")).floatValue();
       float bad = ((Number) entry.get("bad_avg")).floatValue();
       int msg_count = ((Number) entry.get("msg_count")).intValue();
-      Data data = new Data(good, bad, msg_count);
-      topics.publish("chart", data);
+      sink.tryEmitNext(new Data(good, bad, msg_count));
       return;
     }
   }
