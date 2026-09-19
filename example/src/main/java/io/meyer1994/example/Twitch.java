@@ -1,30 +1,33 @@
 package io.meyer1994.example;
 
-import com.github.twitch4j.chat.events.channel.ChannelMessageEvent;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+
 import org.apache.camel.Exchange;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
+
+import com.github.twitch4j.chat.events.channel.ChannelMessageEvent;
+
 import reactor.core.publisher.Flux;
 
 @Service
 public class Twitch {
-  private static final DateTimeFormatter CHAT_TIME_FORMAT =
-      DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault());
+  private static final DateTimeFormatter CHAT_TIME_FORMAT = DateTimeFormatter
+      .ofPattern("HH:mm:ss")
+      .withZone(ZoneId.systemDefault());
 
-  private final TemplateEngine templateEngine;
+  @Autowired
+  private TemplateEngine templateEngine;
+
   private final Topics<ServerSentEvent<String>> topics = new Topics<>();
-
-  public Twitch(TemplateEngine templateEngine) {
-    this.templateEngine = templateEngine;
-  }
 
   public Flux<ServerSentEvent<String>> stream(String channel) {
     return topics.subscribe(channel);
@@ -49,13 +52,10 @@ public class Twitch {
     variables.put("timeText", CHAT_TIME_FORMAT.format(event.getFiredAtInstant()));
     variables.put("message", event.getMessage());
 
+    String id = String.format("twitch:%s", messageId);
     String html = render("chat-message", variables);
 
-    ServerSentEvent<String> sse =
-        ServerSentEvent.<String>builder(html)
-            .id("twitch:" + event.getMessageEvent().getMessageId().orElse("-1"))
-            .build();
-
+    var sse = ServerSentEvent.<String>builder(html).id(id).build();
     topics.publish(channel, sse);
   }
 
@@ -64,6 +64,7 @@ public class Twitch {
     String messageId = exchange.getVariable("message_id", String.class);
     Double good = exchange.getVariable("goodScore", Double.class);
     Double bad = exchange.getVariable("badScore", Double.class);
+
     if (channel == null || messageId == null || good == null || bad == null) {
       return;
     }
@@ -74,9 +75,10 @@ public class Twitch {
     variables.put("badId", badScoreElementId(messageId));
     variables.put("badScore", bad);
 
+    String id = String.format("twitch-score:%s", messageId);
     String html = render("chat-score-update", variables);
-    ServerSentEvent<String> sse =
-        ServerSentEvent.<String>builder(html).id("twitch-score:" + messageId).build();
+
+    var sse = ServerSentEvent.<String>builder(html).id(id).build();
     topics.publish(channel, sse);
   }
 

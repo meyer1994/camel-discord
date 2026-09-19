@@ -110,9 +110,10 @@
           </div>
         </div>
 
-        <!-- messages -->
-        <div id="messages" hx-ext="hx-sse" th:attr="'hx-sse:connect' = @{/c/{channel}/events(channel=${channel})}"
-          hx-swap="beforeend scroll:bottom" class="flex flex-col gap-4 flex-1 overflow-y-auto [scrollbar-gutter:stable] overscroll-contain" hx-on="every 0.5s -> {
+        <!-- messages: unnamed SSE appends rows; score events are OOB by id -->
+        <div id="messages" hx-ext="hx-sse" th:attr="'hx-sse:connect'=@{/c/{channel}/events(channel=${channel})}"
+          hx-swap="beforeend scroll:bottom"
+          class="flex flex-col gap-4 flex-1 overflow-y-auto [scrollbar-gutter:stable] overscroll-contain" hx-on="every 0.5s -> {
               while (this.children.length > 100) this.firstElementChild.remove();
             }">
         </div>
@@ -120,36 +121,33 @@
     </section>
   </main>
 
-  <!-- Fragments are stripped during the initial page render. -->
   <div th:remove="all">
-    <!-- Complete message fragment -->
+    <!-- Shared score badge: oob=false in new messages, oob=true for later updates -->
+    <span th:fragment="score-badge(id, kind, score, oob)" th:id="${id}" aria-live="polite"
+      th:attr="hx-swap-oob=${oob} ? 'outerHTML' : null"
+      th:class="|badge badge-sm font-bold ${kind == 'good' ? 'badge-success' : 'badge-error'}|" th:title="${score == null
+        ? (kind == 'good' ? 'Good similarity unavailable' : 'Bad similarity unavailable')
+        : ((kind == 'good' ? 'Good similarity: ' : 'Bad similarity: ') + #numbers.formatDecimal(score, 0, 1))}"
+      th:text="${score == null ? '' : #numbers.formatDecimal(score, 0, 1)}">-</span>
+
+    <!-- Complete message fragment (empty scores, stable badge ids) -->
     <div
       th:fragment="chat-message(messageId, source, username, title, goodId, badId, goodScore, badScore, timeTitle, timeText, message)"
       th:id="${messageId}" th:title="${title}" class="flex flex-col gap-1 w-full">
-      <!-- header: source left, timestamp right -->
       <div class="flex justify-between items-center text-xs w-full">
-        <!-- left: source and time -->
         <div class="flex items-center gap-2">
-          <!-- source -->
           <span class="badge badge-xs font-bold"
             th:classappend="${source == 'Twitch'} ? 'badge-primary' : 'badge-secondary'" th:title="|Source: ${source}|"
             th:text="${source}">source</span>
-          <!-- time -->
           <time class="text-base-content/50" th:title="${timeTitle}" th:text="${timeText}">00:00:00</time>
         </div>
 
-        <!-- right: scores -->
         <div class="flex items-center gap-2">
-          <span th:id="${goodId}" aria-live="polite" class="badge badge-sm badge-success font-bold"
-            th:title="${goodScore == null ? 'Good similarity unavailable' : 'Good similarity: ' + #numbers.formatDecimal(goodScore, 0, 1)}"
-            th:text="${goodScore == null ? '' : #numbers.formatDecimal(goodScore, 0, 1)}">-</span>
-          <span th:id="${badId}" aria-live="polite" class="badge badge-sm badge-error font-bold"
-            th:title="${badScore == null ? 'Bad similarity unavailable' : 'Bad similarity: ' + #numbers.formatDecimal(badScore, 0, 1)}"
-            th:text="${badScore == null ? '' : #numbers.formatDecimal(badScore, 0, 1)}">-</span>
+          <th:block th:replace="~{::score-badge(${goodId}, 'good', ${goodScore}, false)}" />
+          <th:block th:replace="~{::score-badge(${badId}, 'bad', ${badScore}, false)}" />
         </div>
       </div>
 
-      <!-- body: username then message -->
       <div class="w-full flex flex-col gap-1">
         <span class="font-semibold text-sm" th:text="|@${username}|"></span>
         <p class="text-sm break-words" th:text="${message}">Message</p>
@@ -173,14 +171,10 @@
       </tr>
     </th:block>
 
-    <!-- OOB score update fragment -->
+    <!-- OOB score update: replaces badges by id -->
     <th:block th:fragment="chat-score-update(goodId, goodScore, badId, badScore)">
-      <span th:id="${goodId}" hx-swap-oob="outerHTML" aria-live="polite" class="badge badge-sm badge-success font-bold"
-        th:title="|Good similarity: ${#numbers.formatDecimal(goodScore, 0, 1)}|"
-        th:text="${#numbers.formatDecimal(goodScore, 0, 1)}">0</span>
-      <span th:id="${badId}" hx-swap-oob="outerHTML" aria-live="polite" class="badge badge-sm badge-error font-bold"
-        th:title="|Bad similarity: ${#numbers.formatDecimal(badScore, 0, 1)}|"
-        th:text="${#numbers.formatDecimal(badScore, 0, 1)}">0</span>
+      <th:block th:replace="~{::score-badge(${goodId}, 'good', ${goodScore}, true)}" />
+      <th:block th:replace="~{::score-badge(${badId}, 'bad', ${badScore}, true)}" />
     </th:block>
   </div>
 </body>

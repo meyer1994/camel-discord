@@ -1,7 +1,5 @@
 package io.meyer1994.example;
 
-import io.meyer1994.KickChatMessage;
-import io.meyer1994.KickConstants;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -9,24 +7,33 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+
 import org.apache.camel.Exchange;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
+
+import io.meyer1994.KickChatMessage;
+import io.meyer1994.KickConstants;
 import reactor.core.publisher.Flux;
 
+/**
+ * Kick
+ * 
+ * tihs class bridges the stream of messages from apache camel to Flux
+ */
 @Service
 public class Kick {
-  private static final DateTimeFormatter CHAT_TIME_FORMAT =
-      DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault());
+  private static final DateTimeFormatter CHAT_TIME_FORMAT = DateTimeFormatter
+      .ofPattern("HH:mm:ss")
+      .withZone(ZoneId.systemDefault());
 
-  private final TemplateEngine templateEngine;
+  @Autowired
+  private TemplateEngine templateEngine;
+
   private final Topics<ServerSentEvent<String>> topics = new Topics<>();
-
-  public Kick(TemplateEngine templateEngine) {
-    this.templateEngine = templateEngine;
-  }
 
   public Flux<ServerSentEvent<String>> stream(String channel) {
     return topics.subscribe(channel);
@@ -34,8 +41,7 @@ public class Kick {
 
   public void publish(Exchange exchange) {
     KickChatMessage message = exchange.getMessage().getBody(KickChatMessage.class);
-    String channel =
-        exchange.getMessage().getHeader(KickConstants.HEADER_CHANNEL_NAME, String.class);
+    String channel = exchange.getMessage().getHeader(KickConstants.HEADER_CHANNEL_NAME, String.class);
     Instant timestamp = timestamp(message.createdAt());
     String timestampText = CHAT_TIME_FORMAT.format(timestamp);
     String timestampTitle = timestamp.toString();
@@ -55,10 +61,10 @@ public class Kick {
     variables.put("timeText", timestampText);
     variables.put("message", message.content());
 
+    String id = String.format("kick:%d", message.id());
     String html = render("chat-message", variables);
 
-    ServerSentEvent<String> sse =
-        ServerSentEvent.<String>builder(html).id("kick:" + message.id()).build();
+    var sse = ServerSentEvent.<String>builder(html).id(id).build();
     topics.publish(channel, sse);
   }
 
@@ -67,6 +73,7 @@ public class Kick {
     String messageId = exchange.getVariable("message_id", String.class);
     Double good = exchange.getVariable("goodScore", Double.class);
     Double bad = exchange.getVariable("badScore", Double.class);
+
     if (channel == null || messageId == null || good == null || bad == null) {
       return;
     }
@@ -77,9 +84,10 @@ public class Kick {
     variables.put("badId", badScoreElementId(messageId));
     variables.put("badScore", bad);
 
+    String id = String.format("kick-score:%s", messageId);
     String html = render("chat-score-update", variables);
-    ServerSentEvent<String> sse =
-        ServerSentEvent.<String>builder(html).id("kick-score:" + messageId).build();
+
+    var sse = ServerSentEvent.<String>builder(html).id(id).build();
     topics.publish(channel, sse);
   }
 
